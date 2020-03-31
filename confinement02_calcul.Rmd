@@ -129,12 +129,11 @@ df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
 df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
 df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
 df_nrc$year<-2020 # heure
-
+df_nrc$day2<-as.factor(df_nrc$day)
 ggplot(df_nrc,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
-
-ggplot(df_nrc,aes(x=hour, y=day, fill = stat(x)))+theme_minimal() + 
-  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
-  scale_fill_viridis_c(name = "heures", option = "C") +
+library(ggridges)
+ggplot(df_nrc,aes(x=hour, y=day2))+theme_minimal() + 
+  geom_density_ridges(scale=10) +
   labs(title = 'distribution du sentiment')
 
 
@@ -175,14 +174,14 @@ write_rds(liwc,"df_nrcliwc.rds")
 Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
 https://www.kovcomp.co.uk/wordstat/LIWC.html
 
-## methode lsd
+## Methode lsd
 
 Lexicoder
 
 https://www.poltext.org/fr/donnees-et-analyses/lexicoder
 
 
-## méthode sur mesure
+## Méthode sur mesure
 
 Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère par ses dictionnaires, on peut être tenté d'en construire un propre au corpus. Mieux on peut généraliser l'idée en abandonnant la valence pour crée des indicateurs plus topicaux. 
 
@@ -192,7 +191,7 @@ Par exemple puisque la nourriture semble jouer un rôle important dans l'expéri
 
 my_text <- liwc$text
 method <- "custom"
-custom_lexicon <- data.frame(word=c("nourriture", "aliment", "cuisine", "recette","food","manger","gourmand","appétit","recette","cooking","cook", "appétissant","chocolat"), value=c(1,1,1,1,1,1,1,1,1,1,1,1,1))
+custom_lexicon <- data.frame(word=c("nourriture", "aliment", "cuisine", "recette","food","manger","gourmand","appétit","recette","cooking","cook", "appétissant","chocolat", "lasagne"), value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1))
 my_custom_values <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
 my_custom_values<-as.data.frame(my_custom_values)
 ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
