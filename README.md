@@ -5,8 +5,9 @@ L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr e
 les premiers résultats sont [lisibles ici]()
 
 Quelques questions à explorer
- * la dimension spatiale via la geoloc
+ * la dimension spatiale via la geolocalisation
  * le traitement des emojis
- * l'analyse des auto-correlation et corrélation croisée
- * l'analyse par profil d'utisateur (induction du genre, frequence de post, nb de followers)
+ * l'analyse des auto-correlations et corrélations croisées
+ * l'analyse par profils d'utisateurs (induction du genre, frequence de post, nb de followers)
  * Approche par LDA
+ * Mesure spécifiques de l'ennui, de la peur, de la solitude.... (sur-mesure à partir de lexiques home made)
