@@ -1,0 +1,206 @@
+---
+title: "confinement"
+author: "CB"
+date: "12 mars 2020"
+output: html_document
+---
+
+
+Ce script est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
+
+Ses conséquence sont sanitaired, sociales, politiqued et économiqued. La manière dont les gens le vivent, du moins en France résulte d'un régime d'exception, largment adopté à travers les pays, qui vise à maintenir au domicile toutes les personnes non nécessaire au traitement de la question sanitaire, de l'approvisionnement, et des productions fondamentales.
+
+L'expérience est celle du confinement. Une recommandation à rester chez soi, un dispositif réglementaire qui contrôle et sanctionne, une privation temporaire de liberté de déplacement. Une vie sociale confinée au foyer et aux moyens de communiquer.
+
+Un des réseaux où les états d'âmes peuvent se répandrent est naturellement twitter. Très rapidement a émergé un hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropologique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de bouche en bouche et s'est déplacé dans sur la planête largement en businessclass).
+
+Pour les données factuelle le dashboard de la hopskin School restera un cas d'écoles, mais l'initiative du geg au travers de son site le grand continent est remarquable. Nous avons fait ce travail en suivant aussi le live du monde remarquable de précision et d'attention.
+
+On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
+
+
+
+# Les outils de l'analyse
+
+Le but de l'exercice est de mesurer le sentiment dans la période covid19 au travers des twits générés avec le hashtag #confinementjourxx qui signale clairement l'intention de donner son sentiment, son humeur, sa pensée, son expérience. 
+
+C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. 
+
+```{r setup, include=TRUE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(rtweet) #extraction twitter
+library(gridExtra) #associer des ggplot
+library(ggrepel) #pour une belle labelisation des xy
+library(igraph) #pour l'analyse de réseau
+library(wesanderson)
+library(scales) #pour les échelles de temps et de date
+library(syuzhet)     # ncr      
+library(tm)
+library(quanteda) #with quanteda
+
+```
+
+# La collecte des données
+
+On utilise l'API de twitter via le package [`rtweet`](https://rtweet.info/articles/intro.html) pour aller chercher les tweets contenant le hashtag "confinementjour$" 
+
+Les limites de l'API free de twitter sont de 15000 requêtes par 15mn, on emploie donc le paramètre `retryonratelimit = TRUE` pour poursuivre la requête en supportant la latence. Celà représente facilement quelques heures de requêtage. On sauvegarde donc rapidement le résultat dans un fichier fixe, qu'on pourra rappeler plus tard pour analyse, avec la fonction `write_rds`.
+
+On commence à capturer les données le 9ème jour, puis chaque jour sur le jour de la veille. La convention fixe par sa morphologie un ordre du temps. (regex simple)
+
+
+```{r capt, include=TRUE}
+
+df<- readRDS(file = "df.rds") 
+
+```
+
+# L' évolution quantitative des tweets
+
+On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
+
+```{r desc1}
+## plot time series of tweets
+ts_plot(df, "1 hours", color="darkblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+```
+
+
+# Annotations
+
+L'analyse du sentiment peut se faire avec plusieurs outils :
+- le NCR avec le package [syuzhet](https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
+- le liwc
+- le lsdfr
+
+On en profite pour faire une analyse de fiabilité
+
+On complète avec les émotions. 
+
+L'unité de temps est l'heure et la journée. 
+
+Un contrôle pour les calcul intermédiaires  en échantillonnant.
+```{r Senti01, include=FALSE}
+df2<- df #sample_n(df,100000)
+
+```
+
+
+## Méthode NRC
+
+On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
+
+```{r Senti01}
+
+#library(syuzhet)            
+
+#paramétres
+phrase<-as.character(df2$text)
+words<- get_tokens(phrase, pattern = "\\W")
+#extraction
+my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
+
+#ajout de la colonne sentiment au tableau de données des contributions:
+sent<-as.data.frame(my_text_values_french1)
+df_nrc<-cbind(df2,sent)
+write_rds(df_nrc,"df_nrc.rds")
+
+
+```
+
+On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+
+```{r Senti03}
+
+#construire des dates jour/heures
+
+df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
+df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
+df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
+df_nrc$year<-2020 # heure
+
+ggplot(df_nrc,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
+
+ggplot(df_nrc,aes(x=hour, y=day, fill = stat(x)))+theme_minimal() + 
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  scale_fill_viridis_c(name = "heures", option = "C") +
+  labs(title = 'distribution du sentiment')
+
+
+```
+## Methode liwc
+
+le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
+
+Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. 
+
+ * La sensorialité (voir, entendre, sentir) 
+ * L’orientation temporelle ( passé, présent, futur) 
+ * Les émotions négatives (tristesse, colére, )
+ * Le corps
+
+La procédure pour extraire ces notions est fort simple :
+
+https://liwc.wpengine.com/compare-dictionaries/
+
+On retrouvera ici les [principales variables] (https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir 
+
+
+```{r liwc01, fig.height=9}
+
+# the devtools package needs to be installed for this to work
+devtools::install_github("kbenoit/quanteda.dictionaries")
+
+library("quanteda.dictionaries")
+dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
+                             format = "LIWC")
+test<-liwcalike(df_nrc$text,dictionary = dict_liwc_french)
+liwc<-cbind(df_nrc,test)
+
+write_rds(liwc,"df_nrcliwc.rds")
+
+```
+
+Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
+https://www.kovcomp.co.uk/wordstat/LIWC.html
+
+## methode lsd
+
+Lexicoder
+
+https://www.poltext.org/fr/donnees-et-analyses/lexicoder
+
+
+## méthode sur mesure
+
+Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère par ses dictionnaires, on peut être tenté d'en construire un propre au corpus. Mieux on peut généraliser l'idée en abandonnant la valence pour crée des indicateurs plus topicaux. 
+
+Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
+
+```{r Senti03, include=TRUE}
+
+my_text <- liwc$text
+method <- "custom"
+custom_lexicon <- data.frame(word=c("nourriture", "aliment", "cuisine", "recette","food","manger","gourmand","appétit","recette","cooking","cook", "appétissant","chocolat"), value=c(1,1,1,1,1,1,1,1,1,1,1,1,1))
+my_custom_values <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
+my_custom_values<-as.data.frame(my_custom_values)
+ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
+```
+
+##le traitement des emojis.
+
+ c'est une question essentielle
+ 
+
+##Références :

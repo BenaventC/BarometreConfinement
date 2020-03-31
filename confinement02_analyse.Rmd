@@ -1,0 +1,684 @@
+---
+title: "confinement"
+author: "CB"
+date: "12 mars 2020"
+output: html_document
+---
+
+
+Ce script est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
+
+Ses conséquence sont sanitaired, sociales, politiqued et économiqued. La manière dont les gens le vivent, du moins en France résulte d'un régime d'exception, largment adopté à travers les pays, qui vise à maintenir au domicile toutes les personnes non nécessaire au traitement de la question sanitaire, de l'approvisionnement, et des productions fondamentales.
+
+L'expérience est celle du confinement. Une recommandation à rester chez soi, un dispositif réglementaire qui contrôle et sanctionne, une privation temporaire de liberté de déplacement. Une vie sociale confinée au foyer et aux moyens de communiquer.
+
+Un des réseaux où les états d'âmes peuvent se répandrent est naturellement twitter. Très rapidement a émergé un hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropologique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de bouche en bouche et s'est déplacé dans sur la planête largement en businessclass).
+
+Pour les données factuelle le dashboard de la hopskin School restera un cas d'écoles, mais l'initiative du geg au travers de son site le grand continent est remarquable. Nous avons fait ce travail en suivant aussi le live du monde remarquable de précision et d'attention.
+
+On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
+
+
+
+# Les outils de l'analyse
+
+Le but de l'exercice est de mesurer le sentiment dans la période covid19 au travers des twits générés avec le hashtag #confinementjourxx qui signale clairement l'intention de donner son sentiment, son humeur, sa pensée, son expérience. 
+
+C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. 
+
+```{r setup, include=TRUE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(rtweet) #extraction twitter
+library(gridExtra) #associer des ggplot
+library(ggrepel) #pour une belle labelisation des xy
+library(igraph) #pour l'analyse de réseau
+library(wesanderson)
+library(scales) #pour les échelles de temps et de date
+library(syuzhet)     # ncr      
+library(tm)
+library(quanteda) #with quanteda
+
+```
+
+# La collecte des données
+
+On utilise l'API de twitter via le package [`rtweet`](https://rtweet.info/articles/intro.html) pour aller chercher les tweets contenant le hashtag "confinementjour$" 
+
+Les limites de l'API free de twitter sont de 15000 requêtes par 15mn, on emploie donc le paramètre `retryonratelimit = TRUE` pour poursuivre la requête en supportant la latence. Celà représente facilement quelques heures de requêtage. On sauvegarde donc rapidement le résultat dans un fichier fixe, qu'on pourra rappeler plus tard pour analyse, avec la fonction `write_rds`.
+
+On commence à capturer les données le 9ème jour, puis chaque jour sur le jour de la veille. La convention fixe par sa morphologie un ordre du temps. (regex simple)
+
+
+```{r capt, include=TRUE}
+
+df<- readRDS(file = "df.rds") 
+
+```
+
+# L' évolution quantitative des tweets
+
+On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
+
+```{r desc1}
+## plot time series of tweets
+ts_plot(df, "1 hours", color="darkblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+```
+
+
+# Annotations
+
+L'analyse du sentiment peut se faire avec plusieurs outils :
+- le NCR avec le package [syuzhet](https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
+- le liwc
+- le lsdfr
+
+On en profite pour faire une analyse de fiabilité
+
+On complète avec les émotions. 
+
+L'unité de temps est l'heure et la journée. 
+
+Un contrôle pour les calcul intermédiaires  en échantillonnant.
+```{r Senti01, include=FALSE}
+df2<- df #sample_n(df,100000)
+
+```
+
+
+## Méthode NRC
+
+On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
+
+```{r Senti01}
+
+#library(syuzhet)            
+
+#paramétres
+phrase<-as.character(df2$text)
+words<- get_tokens(phrase, pattern = "\\W")
+#extraction
+my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
+
+#ajout de la colonne sentiment au tableau de données des contributions:
+sent<-as.data.frame(my_text_values_french1)
+df_nrc<-cbind(df2,sent)
+write_rds(df_nrc,"df_nrc.rds")
+
+
+```
+
+On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+
+```{r Senti03}
+
+#construire des dates jour/heures
+
+df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
+df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
+df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
+df_nrc$year<-2020 # heure
+
+ggplot(df_nrc,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
+
+ggplot(df_nrc,aes(x=hour, y=day, fill = stat(x)))+theme_minimal() + 
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01) +
+  scale_fill_viridis_c(name = "heures", option = "C") +
+  labs(title = 'distribution du sentiment')
+
+
+```
+## Methode liwc
+
+le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
+
+Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. 
+
+ * La sensorialité (voir, entendre, sentir) 
+ * L’orientation temporelle ( passé, présent, futur) 
+ * Les émotions négatives (tristesse, colére, )
+ * Le corps
+
+La procédure pour extraire ces notions est fort simple :
+
+https://liwc.wpengine.com/compare-dictionaries/
+
+On retrouvera ici les [principales variables] (https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir 
+
+
+```{r liwc01, fig.height=9}
+
+# the devtools package needs to be installed for this to work
+devtools::install_github("kbenoit/quanteda.dictionaries")
+
+library("quanteda.dictionaries")
+dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
+                             format = "LIWC")
+test<-liwcalike(df_nrc$text,dictionary = dict_liwc_french)
+liwc<-cbind(df_nrc,test)
+
+write_rds(liwc,"df_nrcliwc.rds")
+
+```
+
+Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
+https://www.kovcomp.co.uk/wordstat/LIWC.html
+
+## methode lsd
+
+Lexicoder
+
+https://www.poltext.org/fr/donnees-et-analyses/lexicoder
+
+
+
+# Analyse du NRC
+
+On commence par l'analyse du sentiment simples, puis à celui des émotions
+
+## La distribution des sentiments positifs et négatifs
+
+( qui sont traités comme deux séries distinctes)
+
+Examinons d'abord la distribution des émotions négatives et positive. On examine dans la foulée leur distribution conjointe.
+
+https://a-little-book-of-r-for-time-series.readthedocs.io/en/latest/src/timeseries.html
+
+par convention le zero est partagé entre les positive et les negatifs
+
+```{r Senti02, include=TRUE}
+
+#statistiques : moyenne et ecartype
+s_mean1<-round(mean(df_nrc$negative),2)
+s_mean2<-round(mean(df_nrc$positive),2)
+
+s_std1<-round(sd(df_nrc$negative),2)
+s_std2<-round(sd(df_nrc$positive),2)
+
+#histogram
+g1<-ggplot(df_nrc, aes(x=negative))+
+  geom_histogram(binwidth=1,fill="red")+
+  theme_minimal()+ scale_x_reverse()+
+  ggplot2::annotate("text", x=7, y=200000, label= paste0("moyenne=",s_mean1," \n ecart type",s_std1))
+
+g2<-ggplot(df_nrc, aes(x=positive))+
+  geom_histogram(binwidth=1,fill="darkgreen")+
+  theme_minimal()+xlim(-1,15)+
+  ggplot2::annotate("text", x=7, y=200000, label= paste0("moyenne=",s_mean2," \n ecart type",s_std2))
+grid.arrange(g1,g2,ncol=2)
+```
+
+```{r Senti03, include=TRUE}
+ggplot(df_nrc,aes(x=positive, y=negative))+geom_point()+theme_minimal()+geom_smooth(method="gam")
+```
+
+
+## L'évolution au cours du temps 
+
+
+On represente ici l'évolution des scores de positivité et de négativité, ainsi que leur différence qui donne le sentiment moyen si on pense que les points négatifs éffacent les points positifs. On garde en tête l'idée de ce carré magique que le négatif n'est pas que l'antonyme du positif. 
+
+
+```{r Senti04}
+
+sentevol<-df_nrc %>% group_by(day,hour) %>% mutate(n=1) %>%summarise(positive=mean(positive, na.rm=TRUE),negative=mean(negative, na.rm=TRUE), n=sum(n))
+sentevol$date<-paste0("2020-03-",sentevol$day," ",sentevol$hour,":00:00")
+sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-sentevol %>% ungroup %>%select(date2, negative,positive) %>% mutate(negative=-1*negative, sentiment=positive+negative)
+
+library(reshape2)
+foo<-melt(foo, id=c("date2"))
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "gam")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Valence par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+```
+
+un peu d'analyse des autocorrelations et des correlations croisées ou comment analyser les relation de la peine et du bonheur. IL nous faut deux grilles théoriques.
+
+ - grille 1 : plus on est heureux moins on est négatif : une logique de balance ou de compensation qui se justifie par une logqique d'effort, pour un niveau d'éffort donné on reparti sont expression entre l'affirmation de l'espoir et la distillation de rancoeur.
+ - grille 2 : plus on est heureux plus on est négatif ( moins on est heureux et moins on se plaint) : une logique d'expression ou de verbalisation qui oppose le silence à la protestation pour reprendre les catégories de hisrchman. 
+
+Pour des idées de code :
+
+http://r-statistics.co/Time-Series-Analysis-With-R.html
+
+https://a-little-book-of-r-for-time-series.readthedocs.io/en/latest/src/timeseries.html
+
+```{r tssent}
+
+tt <- ts(foo$sentiment,start=c(2020,firstHour),frequency=24*365)
+
+```
+
+
+
+## l'analyse des émotions (NCR):
+
+On se concentre sur les 8 facettes de l'émotion telle que conceptualisée par [Plutchik](https://positivepsychologyprogram.com/emotion-wheel/) (@plutchik_psychoevolutionary_1982), on reprend les définitions en anglais :
+
+ * "trust goes from acceptance to admiration
+ * fear goes from timidity to terror
+ * surprise goes from uncertainty to amazement
+ * sadness goes from gloominess to grief
+ * disgust goes from dislike to loathing
+ * anger goes from annoyance to fury
+ * anticipation goes from interest to vigilance
+ * joy goes from serenity to ecstasy"
+ 
+ et en francais
+ 
+ * "la confiance va de l'acceptation à l'admiration
+ * la peur va de la timidité à la terreur
+ * la surprise va de l'incertitude à l'étonnement
+ * la tristesse va de la morosité au chagrin
+ * le dégoût va de l'aversion à la répugnance
+ * la colère va de l'agacement à la fureur
+ * l'anticipation va de l'intérêt à la vigilance
+ * La joie va de la sérénité à l'extase".
+
+ Elle est mesurée sur la base des textes par l'outil NCR élaborée par [Mohammad Saif](http://saifmohammad.com/WebPages/lexicons.html), pour le français [voir](http://sentiment.nrc.ca/lexicons-for-research/).
+ 
+On peut raisonner en part relative des émotions dans le mesure où l'outil NCR compte les éléments probables de chacune des émotions. Un même texte peut être sujet à plusieurs émotions. Certains ne le seront à aucune et seront donc neutre. La somme des scores d'émotion mesure d'une certaine manière l'expressivité des textes, leur écart à une langue de type administrative qui tente de liquider tout terme expressif et émotionnel. Nous utiliserons cette propriété.
+
+
+```{r emo01, fig.height=9}
+
+emoevol<-df_nrc %>% group_by(day,hour) %>% mutate(n=1) %>% 
+  summarise(anger=mean(anger,na.rm=TRUE), 
+            anticipation=mean(anticipation, na.rm=TRUE),
+            disgust=mean(disgust, na.rm=TRUE),
+            fear=mean(fear, na.rm=TRUE),
+            joy=mean(joy, na.rm=TRUE),
+            sadness=mean(sadness, na.rm=TRUE),
+            surprise=mean(surprise, na.rm=TRUE),
+            trust=mean(trust, na.rm=TRUE),
+            n=sum(n))
+emoevol$date<-paste0("2020-03-",emoevol$day," ",emoevol$hour,":00:00")
+emoevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-emoevol %>% ungroup %>%select(date2, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy )
+
+emocol<-c("red3","orangered1","purple3","royalblue3","chartreuse","olivedrab3","green4","yellow") #en respectant des codes mais il faudra adoucir.
+#la distribution des émotions
+  
+
+foo<-melt(foo, id=c("date2"))
+
+#foo$variable2<-factor(foo$variable, ordered = TRUE,levels = c("joy","trust","anticipation","surprise","sadness","disgust","fear","anger"))
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable),show.legend = FALSE)+
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(method = "gam", aes(color=variable)  )+
+  labs(title="Les émotions des tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= "Définitions Plutchik (82) - operationalisation via NRC - lissage GAM:
+ - la confiance va de l'acceptation à l'admiration
+ - la peur passe de la timidité à la terreur
+ - la surprise va de l'incertitude à l'étonnement
+ - la tristesse passe de la morosité au chagrin
+ - le dégoût va de l'aversion à la répugnance
+ - la colère passe de l'agacement à la fureur
+ - l'anticipation va de l'intérêt à la vigilance
+ - La joie passe de la sérénité à l'extase
+ \n \nSource: Data collected by Benavent C. from Twitter's REST API via rtweet")+
+  facet_wrap(vars(variable),ncol=4)+
+  scale_color_manual(values=emocol)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+```
+et sous une autre forme.
+
+```{r emo01b, fig.height=9}
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_area(stat="identity",size=5,aes(fill=variable),show.legend = TRUE, position="fill")+
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
+  theme_minimal()+
+  labs(title="Les émotions des tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= "Définitions Plutchik (82) - operationalisation via NRC - lissage GAM:
+ - la confiance va de l'acceptation à l'admiration
+ - la peur passe de la timidité à la terreur
+ - la surprise va de l'incertitude à l'étonnement
+ - la tristesse passe de la morosité au chagrin
+ - le dégoût va de l'aversion à la répugnance
+ - la colère passe de l'agacement à la fureur
+ - l'anticipation va de l'intérêt à la vigilance
+ - La joie passe de la sérénité à l'extase
+ \n \nSource: Data collected by Benavent C. from Twitter's REST API via rtweet")+
+  scale_color_manual(values=emocol)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+```
+
+Une représentation moins brute peut être fournie. On va recalculer les score de manière relative en sommant les scores bruts. et en rapportant cette somme au score. 
+
+```{r emo02, include=TRUE, fig.height=9}
+emocol<-c("red3","orangered1","purple3","royalblue3","chartreuse","olivedrab3","green4","gold") #en respectant des codes mais il faudra adoucir.
+
+foo<-emoevol %>% ungroup %>%select(date2, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy )
+
+emo<-subset(foo,select=-c(date2))
+emo$tot<-rowSums(emo, na.rm = FALSE, dims = 1)
+emo$tot[is.na(emo$tot)]<-0.000001
+emo$p_anger<-emo$anger/emo$tot
+emo$p_anticipation<-emo$anticipation/emo$tot
+emo$p_disgust<-emo$disgust/emo$tot
+emo$p_fear<-emo$fear/emo$tot
+emo$p_joy<-emo$joy/emo$tot
+emo$p_sadness<-emo$sadness/emo$tot
+emo$p_surprise<-emo$surprise/emo$tot
+emo$p_trust<-emo$trust/emo$tot
+
+foo2<-emo %>%
+  select(p_anger,p_anticipation,p_disgust, p_fear,p_joy, p_sadness ,p_surprise,p_trust)
+date<-foo %>%select(date2)
+
+foo2<-cbind(date,foo2)
+foo2<-melt(foo2, id=c("date2"))
+
+ggplot(foo2, aes(x=date2,y=value,group=variable))+
+  geom_area(stat="identity",size=5,aes(fill=variable),show.legend = TRUE, position="fill")+
+  theme_minimal()+theme(axis.text.x = element_text(size=11, angle=45))+
+  labs(title="Spectre des émotions #confinementjour", y="Proportion",x=NULL)+  
+  scale_fill_manual(values=emocol)+
+  scale_color_manual(values=emocol)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+```
+
+La somme des émotions moyennes, elles peuvent d'additionner car elle ne sont pas exclusive dans les textes ( on peut avoir en même temps de la trisesse et de la joie), représente en quelque sorte l'"émotionnalité" de la production textuelle quelqu'en soit la couleur.
+
+Apres une première montée, une seconde semble s'observer. Est-ce un changement du sentiment moyen dans la population ou l'effet de l'engagement sur le hashtag?
+
+```{r emo02, include=TRUE}
+
+foo3<-emo %>%  select(tot)
+date<-foo %>%select(date2)
+
+foo3<-cbind(date,foo3)
+
+ggplot(foo3, aes(x=date2,y=tot))+
+  geom_bar(stat="identity",size=2,show.legend = TRUE,color="gold2")+
+  theme_minimal()+theme(axis.text.x = element_text(size=11, angle=45))+
+  labs(title="Intensité des émotions #confinementjour", y="Proportion",x=NULL)+  geom_smooth(method="gam")+
+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+```
+
+Nos séries sont-elles corrélées ? Si elles le sont de manière instantanée c'est qu'elle partagent une cause commune. 
+
+Une structure bifactorielle avec la surprise associée aux deux pôles positifs et négatifs : heureux/malheureux, joyeux/triste ...
+
+```{r ts01,}
+
+M1<-subset(df_nrc, select=c( anger,disgust, fear, sadness ,surprise,anticipation,trust,joy))
+cor1 <- cor(M1)
+library(corrplot)
+corrplot.mixed(cor1)
+# Maximum Likelihood Factor Analysis
+# entering raw data and extracting 3 factors,
+# with varimax rotation
+
+fit <- factanal(M1, 2, rotation="promax")
+print(fit, digits=2, cutoff=.3, sort=TRUE)
+# plot factor 1 by factor 2
+load <- fit$loadings[,1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(M1),cex=.7) # add variable names
+```
+
+# Avec le LIWC
+
+## Le sentiment du LIWC
+
+la tendance
+
+et la corrélation avec le NRC
+
+
+
+## Les topics de liwcs à l'heure
+
+On va analyser trois groupes de variables : celles liées aux proches ( ami, famille, humains), celles liée à la physiologie (alimentation, corps,sexualité,santé ) et enfin celle liée à la dimension saptiotemporelle. 
+
+```{r liwc02, fig.height=9}
+#library(scales)
+foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
+foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-foo %>% ungroup %>%select(date2,ami, famille, humain )
+foo<-melt(foo,id="date2")
+
+emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable))+
+  labs(title="Les thématiques des proches #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse")+  
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)+ 
+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
+foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-foo %>% ungroup %>%select(date2, alimentation,sexualité, santé,corps )
+foo<-melt(foo,id="date2")
+
+emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 45))+
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable))+
+  labs(title="Thématiques alimentation, sexualité, santé des tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse")+
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=2)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
+foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-foo %>% ungroup %>%select(date2, mouvement, espace, temps)
+foo<-melt(foo,id="date2")
+
+emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 45))+
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable))+
+  labs(title="Thématiques alimentation, sexualité, santé des tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse")+
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+```
+##les topic au jours 
+
+### la dimension sociale
+```{r liwc4a}
+# les proches
+
+foo<-liwc %>% group_by(day) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
+foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-foo %>% ungroup %>%select(day,ami, famille, humain )
+foo<-melt(foo,id="day")
+
+emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=day,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable), size=1.5)+
+  labs(title="La thématique des proches des tweets #ConfinementJour", y="Intensité moyenne (par 24h)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse \n=911959")+  
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)
+
+```
+### perceptions
+```{r liwc4b}
+
+
+foo<-liwc %>% group_by(day) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
+foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-foo %>% ungroup %>%select(day, mouvement, espace, temps)
+foo<-melt(foo,id="day")
+
+emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=day,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 45))+
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable),size=1.5)+
+  labs(title="Thématiques du temps, de l'espace et du mouvement -tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse")+
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)
+```
+
+### la physiologie
+```{r liwc4c}
+
+#l'organique
+foo<-liwc %>% group_by(day) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
+
+foo<-foo %>% ungroup %>%select(day, alimentation,sexualité, santé,corps )
+foo<-melt(foo,id="day")
+
+emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=day,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 45))+
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable))+
+  labs(title="Thématiques : alimentation, sexualité, santé des tweets #ConfinementJour", y="Intensité moyenne (par heure)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse")+
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=2)
+
+
+```
+# l'analyse des résultats du lexicoder
+
+
+# Etude de la convergence des indicateurs
+
+Les indicateurs de sentiment construits sur des dictionnaires et a fortiori traduits posent des questions de validité de mesure : 
+ - validité de contenu
+ - validité convergente
+ - validité discriminante
+ - fiabilité et consistance interne
+ - sensibilité
+ 
+
+Les différentes mesures de sentiment vont-elle dans le même sens?
+
+Faut-il les combiner au travers d'un modèle factoriel?
+
+Comment conserver les nuances?
+
+
+## convergence des indicateurs
+
+Une approche en terme de correlations à trois niveaux : l'unité de texte et son évolution dans le temps; l'echelle de l'heure, l'échelle du jour. 
+
+
+```{r val1}
+cor 
+```
+
+```{r val2}
+cor 
+```
+
+```{r val3}
+cor 
+```
+
+Une approche en terme de reliability et finalement ce sont les items d'un score. une approche factorielle.
+
+l'analyse simple des corrélation montre une faible consistance
+
+```{r val4}
+r_sent<-subset(liwc, select=c( negative,  émonég,émopos,positive))
+cor2 <- cor(r_sent)
+cor2
+corrplot.mixed(cor2, order = "hclust", addrect = 2)
+
+```
+
+## facettes et sentiments
+
+
+Regardons les relations entre émotions et expérience via https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html
+
+```{r liwc3,}
+M1<-subset(liwc, select=c( negative,émonég,anger,disgust, fear, sadness ,surprise,anticipation,trust,joy,positive, émopos))
+
+M2<-subset(liwc, select=c( alimentation,sexualité, santé,corps,ami, famille, humain))
+cor2 <- cor(M2)
+library(corrplot)
+corrplot.mixed(cor2, order = "hclust", addrect = 2)
+
+# Maximum Likelihood Factor Analysis
+# entering raw data and extracting 3 factors,
+# with oblimin(promax) rotation - factors could be correlated
+
+fit <- factanal(M,3, rotation="promax")
+print(fit, digits=2, cutoff=.3, sort=TRUE)
+# plot factor 1 by factor 2
+load <- fit$loadings[,1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(M),cex=.7) # add variable names
+
+cor3<-cor(x=M1,y=M2)
+cor3 <- melt(cor3)
+
+library(ggplot2)
+ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()+ labs(title="correlation features et sentiment",x="feelings", y="topic")+
+ scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
+   midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
+   name="Pearson\nCorrelation")
+
+
+```
+
+# pour aller plus loin
+
+## méthode sur mesure
+
+Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère par ses dictionnaires, on peut être tenté d'en construire un propre au corpus. Mieux on peut généraliser l'idée en abandonnant la valence pour crée des indicateurs plus topicaux. 
+
+Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
+
+```{r Senti03, include=TRUE}
+
+my_text <- liwc$text
+method <- "custom"
+custom_lexicon <- data.frame(word=c("nourriture", "aliment", "cuisine", "recette","food","manger","gourmand","appétit","recette","cooking","cook", "appétissant","chocolat"), value=c(1,1,1,1,1,1,1,1,1,1,1,1,1))
+my_custom_values <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
+my_custom_values<-as.data.frame(my_custom_values)
+ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
+```
+
+##le traitement des emojis.
+
+ c'est une question essentielle
+ 
+
+##Références :
