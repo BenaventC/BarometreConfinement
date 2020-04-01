@@ -6,18 +6,7 @@ output: html_document
 ---
 
 
-Ce script est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
-
-Ses conséquence sont sanitaired, sociales, politiqued et économiqued. La manière dont les gens le vivent, du moins en France résulte d'un régime d'exception, largment adopté à travers les pays, qui vise à maintenir au domicile toutes les personnes non nécessaire au traitement de la question sanitaire, de l'approvisionnement, et des productions fondamentales.
-
-L'expérience est celle du confinement. Une recommandation à rester chez soi, un dispositif réglementaire qui contrôle et sanctionne, une privation temporaire de liberté de déplacement. Une vie sociale confinée au foyer et aux moyens de communiquer.
-
-Un des réseaux où les états d'âmes peuvent se répandrent est naturellement twitter. Très rapidement a émergé un hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropologique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de bouche en bouche et s'est déplacé dans sur la planête largement en businessclass).
-
-Pour les données factuelle le dashboard de la hopskin School restera un cas d'écoles, mais l'initiative du geg au travers de son site le grand continent est remarquable. Nous avons fait ce travail en suivant aussi le live du monde remarquable de précision et d'attention.
-
-On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
-
+Ce script succède aux script `confinement02_extract.Rmd` destiné à organisation la collecte et la compilation des brutes bruttes de twitter, il a pour objet la systématisation des opération d'annotations avec 
 
 
 # Les outils de l'analyse
@@ -38,6 +27,8 @@ library(scales) #pour les échelles de temps et de date
 library(syuzhet)     # ncr      
 library(tm)
 library(quanteda) #with quanteda
+library(ggridges)
+
 
 ```
 
@@ -75,51 +66,7 @@ ts_plot(df, "1 hours", color="darkblue") +
 
 ```
 
-
-# Annotations
-
-L'analyse du sentiment peut se faire avec plusieurs outils :
-- le NCR avec le package [syuzhet](https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
-- le liwc
-- le lsdfr
-
-On en profite pour faire une analyse de fiabilité
-
-On complète avec les émotions. 
-
-L'unité de temps est l'heure et la journée. 
-
-Un contrôle pour les calcul intermédiaires  en échantillonnant.
-```{r Senti01, include=FALSE}
-df2<- df #sample_n(df,100000)
-
-```
-
-
-## Méthode NRC
-
-On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)
-
-```{r Senti01}
-
-#library(syuzhet)            
-
-#paramétres
-phrase<-as.character(df2$text)
-words<- get_tokens(phrase, pattern = "\\W")
-#extraction
-my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
-
-#ajout de la colonne sentiment au tableau de données des contributions:
-sent<-as.data.frame(my_text_values_french1)
-df_nrc<-cbind(df2,sent)
-write_rds(df_nrc,"df_nrc.rds")
-
-
-```
-
-On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
-https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+Une autre représentation de la série
 
 ```{r Senti03}
 
@@ -131,13 +78,70 @@ df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
 df_nrc$year<-2020 # heure
 df_nrc$day2<-as.factor(df_nrc$day)
 ggplot(df_nrc,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
-library(ggridges)
-ggplot(df_nrc,aes(x=hour, y=day2))+theme_minimal() + 
+
+#library(ggridges)
+
+df_nrc %>% filter(day>1 & day<16) %>%
+  ggplot(aes(x=hour, y=day2))+theme_minimal() + 
   geom_density_ridges(scale=10) +
   labs(title = 'distribution du sentiment')
 
 
 ```
+
+# Annotations
+
+L'analyse du sentiment peut se faire avec plusieurs trois outils :
+ * le NCR avec le package [syuzhet](https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)  On complète avec les émotions. 
+
+ * le #Liwc via quanteda et le dictionnaire en français.
+ * le lsdfr
+
+On en profite pour faire une analyse de fiabilité
+
+
+L'unité de temps est l'heure et la journée. 
+
+Un contrôle pour les calculs intermédiaires  en échantillonnant.
+```{r Senti01, include=FALSE}
+#Un contrôle pour les calculs intermédiaires  en échantillonnant.
+
+df2<- df #sample_n(df,100000)
+
+```
+
+
+## Méthode NRC
+
+### Procédure
+
+On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple.
+
+
+```{r Senti01}
+#require(syuzhet)            
+#prend bcp de temps 
+#paramétres
+phrase<-as.character(df2$text)
+words<- get_tokens(phrase, pattern = "\\W")
+
+#extraction
+my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
+
+#ajout de la colonne sentiment au tableau de données général:
+sent<-as.data.frame(my_text_values_french1)
+df_nrc<-cbind(df2,sent)
+
+#on sauvegarde pour réemploi ultérieur
+write_rds(df_nrc,"df_nrc.rds")
+```
+
+Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
+
+
+On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+
 ## Methode liwc
 
 le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
@@ -187,6 +191,7 @@ Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère pa
 
 Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
 
+
 ```{r Senti03, include=TRUE}
 
 my_text <- liwc$text
@@ -200,6 +205,6 @@ ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
 ##le traitement des emojis.
 
  c'est une question essentielle
- 
+ quelles pistes?
 
 ##Références :

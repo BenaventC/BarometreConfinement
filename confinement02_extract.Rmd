@@ -50,7 +50,9 @@ La boucle est opérationnelle si ajoute, une série hashtag dans le vecteur. Pra
 
 ```{r capt, include=TRUE}
 foo<- df %>% filter(user_id=="1")
-x<-c("#confinementjour15")
+
+x<-c("#ConfinementJour15")
+
 
 for (val in x) {
 tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
@@ -59,17 +61,21 @@ foo<-rbind(foo,tweets)
 }
 df15<-foo
 
-write_rds(df15,"df_consoj15.rds")
+write_rds(tweets,"df_consoj15b.rds")
 
 df1_8<- readRDS(file = "df_conso.rds") 
 df9<-readRDS(file = "df_consoj9.rds")
 df10<-readRDS(file = "df_consoj10.rds")
 df11<-readRDS(file = "df_consoj11.rds")
 df121314<-readRDS(file = "df_consoj121314.rds")
-df15<-readRDS(file = "df_consoj15.rds")
+df15<-readRDS(file = "df_consoj15b.rds")
+df16<-readRDS(file = "df_consoj16.rds")
 
 df<-rbind(df1_8,df9,df10,df11,df121314,df15) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
 write_rds(df,"df.rds")
+sample<-readRDS(file="df.rds")
+sample<- sample_n(sample,80000)
+write_rds(sample,"df_sample.rds")
 
 ```
 
