@@ -98,7 +98,7 @@ g1
 foo<-model %>% closest_to(~"solidarité" + "lutte",30)
 foo = foo [-1:-2,]
 foo$Similarity<-foo[,2]
-g1<-ggplot(foo, aes(x=reorder(word, Similarity),y=Similarity))+geom_point(col="black",size=3)+coord_flip()+theme_minimal()+scale_y_log10()+ggtitle("N-grammes proches de l'hôpital")
+g1<-ggplot(foo, aes(x=reorder(word, Similarity),y=Similarity))+geom_point(col="black",size=3)+coord_flip()+theme_minimal()+scale_y_log10()+ggtitle("N-grammes proches de la solidarité")
 g1
 ```
 
