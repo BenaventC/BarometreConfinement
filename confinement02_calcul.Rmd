@@ -146,22 +146,11 @@ https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
 
 le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
 
-Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. 
-
- * La sensorialité (voir, entendre, sentir) 
- * L’orientation temporelle ( passé, présent, futur) 
- * Les émotions négatives (tristesse, colére, )
- * Le corps
+Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. On retrouvera ici les [principales variables] (https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir 
 
 La procédure pour extraire ces notions est fort simple :
 
-https://liwc.wpengine.com/compare-dictionaries/
-
-On retrouvera ici les [principales variables] (https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir 
-
-
 ```{r liwc01, fig.height=9}
-
 # the devtools package needs to be installed for this to work
 devtools::install_github("kbenoit/quanteda.dictionaries")
 
@@ -176,7 +165,6 @@ write_rds(liwc,"df_nrcliwc.rds")
 ```
 
 Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
-https://www.kovcomp.co.uk/wordstat/LIWC.html
 
 ## Methode lsd
 
@@ -196,7 +184,11 @@ Par exemple puisque la nourriture semble jouer un rôle important dans l'expéri
 
 my_text <- liwc$text
 method <- "custom"
-custom_lexicon <- data.frame(word=c("nourriture", "aliment", "cuisine", "recette","food","manger","gourmand","appétit","recette","cooking","cook", "appétissant","chocolat", "lasagne"), value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1))
+custom_lexicon <- data.frame(word=c("course", "shopping", "queue", "masque","un mètre",
+                                    "distance sociale","commerce","supermarché","superette","marché",
+                                    "faire ses courses", "employé","caissière", "carrefour", "leclerc",
+                                    "Intermarché", "franprix","monoprix" ),
+                             value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
 my_custom_values <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
 my_custom_values<-as.data.frame(my_custom_values)
 ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
@@ -204,7 +196,6 @@ ggplot(my_custom_values,aes(x=my_custom_values))+geom_histogram()
 
 ##le traitement des emojis.
 
- c'est une question essentielle
- quelles pistes?
+ c'est une question essentielle mais résolue par Sophie.....
 
 ##Références :

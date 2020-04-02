@@ -56,11 +56,16 @@ On a commencé à capturer les données le 9ème jour, puis chaque jour sur le j
 
 ```{r capt, include=TRUE, echo=FALSE}
 
-df_nrc<- readRDS(file = "df_nrc.rds") 
+df_nrc<- readRDS(file = "df_nrcliwc.rds") 
 
 df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
+ggplot(df_nrc,aes(x=day))+geom_bar()+theme_minimal()
+
 df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
+ggplot(df_nrc,aes(x=month))+geom_bar()+theme_minimal()
 df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
+ggplot(df_nrc,aes(x=hour))+geom_bar()+theme_minimal()
+
 df_nrc$year<-2020 # heure
 df_nrc$day2<-as.factor(df_nrc$day)
 
@@ -160,8 +165,8 @@ On represente ici l'évolution des scores de positivité et de négativité, ain
 
 ```{r Senti04}
 
-sentevol<-df_nrc %>% group_by(day,hour) %>% mutate(n=1) %>%summarise(positive=mean(positive, na.rm=TRUE),negative=mean(negative, na.rm=TRUE), n=sum(n))
-sentevol$date<-paste0("2020-03-",sentevol$day," ",sentevol$hour,":00:00")
+sentevol<-df_nrc %>% group_by(month,day,hour) %>% mutate(n=1) %>%summarise(positive=mean(positive, na.rm=TRUE),negative=mean(negative, na.rm=TRUE), n=sum(n))
+sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$hour,":00:00")
 sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
 
 foo<-sentevol %>% ungroup %>%select(date2, negative,positive) %>% mutate(negative=-1*negative, sentiment=positive+negative)
@@ -341,9 +346,9 @@ date<-foo %>%select(date2)
 foo3<-cbind(date,foo3)
 
 ggplot(foo3, aes(x=date2,y=tot))+
-  geom_bar(stat="identity",size=2,show.legend = TRUE,color="gold2")+
+  geom_line(stat="identity",size=1,show.legend = TRUE,color="gold2")+
   theme_minimal()+theme(axis.text.x = element_text(size=11, angle=45))+
-  labs(title="Intensité des émotions #confinementjour", subtitle="par heure", y="Somme des émotions",x=NULL)+  geom_smooth(method="gam")+
+  labs(title="Intensité des émotions #confinementjour", subtitle="par heure", y="Somme des émotions",x=NULL)+  geom_smooth(method="gam", color="orange3")+
   scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 ```
@@ -385,11 +390,10 @@ et la corrélation avec le NRC
 On va analyser trois groupes de variables : celles liées aux proches ( ami, famille, humains), celles liée à la physiologie (alimentation, corps,sexualité,santé ) et enfin celle liée à la dimension saptiotemporelle. 
 
 ```{r liwc02, fig.height=8, fig.width=10}
-liwc<-readRDS(file="df_nrcliwc.rds")
 
 #library(scales)
-foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
-foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo<-df_nrc %>% group_by(month,day,hour) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day," ",foo$hour,":00:00")
 foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
 
 foo<-foo %>% ungroup %>%select(date2,ami, famille, humain )
@@ -406,8 +410,8 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
   scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 
-foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
-foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo<-df_nrc %>% group_by(month,day,hour) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day," ",foo$hour,":00:00")
 foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
 
 foo<-foo %>% ungroup %>%select(date2, alimentation,sexualité, santé,corps )
@@ -423,8 +427,8 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
   scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=2)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 
-foo<-liwc %>% group_by(day,hour) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
-foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
+foo<-df_nrc %>% group_by(month, day,hour) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day," ",foo$hour,":00:00")
 foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
 
 foo<-foo %>% ungroup %>%select(date2, mouvement, espace, temps)
@@ -445,37 +449,37 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
 ```{r liwc4a}
 # les proches
 
-foo<-liwc %>% group_by(day) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
-foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
-foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+foo<- df_nrc %>% group_by(month,day) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day)
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d"))
 
-foo<-foo %>% ungroup %>%select(day,ami, famille, humain )
-foo<-melt(foo,id="day")
+foo<-foo %>% ungroup %>%select(date2,ami, famille, humain )
+foo<-melt(foo,id=c("date2"))
 
 emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
 
-ggplot(foo, aes(x=day,y=value,group=variable))+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
   geom_line(size=1,show.legend = FALSE,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
   theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable), size=1.5)+
   labs(title="La thématique des proches des tweets #ConfinementJour", y="Intensité moyenne (par 24h)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse \n=911959")+  
-  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 ```
 ### perceptions
 ```{r liwc4b}
 
 
-foo<-liwc %>% group_by(day) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
-foo$date<-paste0("2020-03-",foo$day," ",foo$hour,":00:00")
-foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+foo<-df_nrc %>% group_by(month,day) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day)
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d"))
 
-foo<-foo %>% ungroup %>%select(day, mouvement, espace, temps)
-foo<-melt(foo,id="day")
+foo<-foo %>% ungroup %>%select(date2, mouvement, espace, temps)
+foo<-melt(foo,id="date2")
 
 emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 
-ggplot(foo, aes(x=day,y=value,group=variable))+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
   geom_line(size=1,show.legend = FALSE,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 45))+
   theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable),size=1.5)+
@@ -487,14 +491,16 @@ ggplot(foo, aes(x=day,y=value,group=variable))+
 ```{r liwc4c}
 
 #l'organique
-foo<-liwc %>% group_by(day) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
+foo<- df_nrc%>% group_by(month,day) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day)
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d"))
 
-foo<-foo %>% ungroup %>%select(day, alimentation,sexualité, santé,corps )
-foo<-melt(foo,id="day")
+foo<-foo %>% ungroup %>%select(date2, alimentation,sexualité, santé,corps )
+foo<-melt(foo,id="date2")
 
 emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 
-ggplot(foo, aes(x=day,y=value,group=variable))+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
   geom_line(size=1,show.legend = FALSE,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 45))+
   theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable))+
@@ -545,7 +551,7 @@ Une approche en terme de reliability et finalement ce sont les items d'un score.
 l'analyse simple des corrélation montre une faible consistance
 
 ```{r val4}
-r_sent<-subset(liwc, select=c( negative,émonég,positive, émopos))
+r_sent<-subset(df_nrc, select=c( negative,émonég,positive, émopos))
 cor2 <- cor(r_sent)
 corrplot.mixed(cor2)
 
@@ -557,9 +563,9 @@ corrplot.mixed(cor2)
 Regardons les relations entre émotions et expérience via https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html
 
 ```{r liwc3,}
-M1<-subset(liwc, select=c(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive))
+M1<-subset(df_nrc, select=c(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive))
 
-M2<-subset(liwc, select=c( alimentation,sexualité, santé,corps,ami, famille, humain))
+M2<-subset(df_nrc, select=c( alimentation,sexualité, santé,corps,ami, famille, humain))
 cor2 <- cor(M2)
 library(corrplot)
 corrplot.mixed(cor2, order = "hclust", addrect = 2)
