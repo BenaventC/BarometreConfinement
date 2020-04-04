@@ -1,5 +1,5 @@
 # Laboratoire du confinement
-!(Pony Wave - venice beach)[ponywave_masc.jpg]
+![Pony Wave - venice beach](ponywave_masc.jpg)
 
 Ce repo contient les éléments d'une analyse en continu d'un fil de tweet défini par l'usage du hashtag #confinementJour1 à #confinementJour_n. A j+15 elle comporte 1.1 millions de tweet, rt et quote.
 Un extrait (df_sample) est disponible dans le repo pour tester les proc. (le fichier entier dépasse la limite des 50mo, il en fait 1,3Go). Cette analyse est conduite en 3 mouvements :
