@@ -1,13 +1,16 @@
 # Laboratoire du confinement
 ![Pony Wave - venice beach](ponywave_masc.jpg)
 
-Ce repo contient les éléments d'une analyse en continu d'un fil de tweet défini par l'usage du hashtag #confinementJour1 à #confinementJour_n. A j+15 elle comporte 1.1 millions de tweet, rt et quote.
-Un extrait (df_sample) est disponible dans le repo pour tester les proc. (le fichier entier dépasse la limite des 50mo, il en fait 1,3Go). Cette analyse est conduite en 3 mouvements :
+Ce repo contient les éléments d'une analyse en continu d'un fil de tweet défini par l'usage du hashtag #confinementJour1 à #confinementJour_n.
+
+Cette analyse est conduite en 3 mouvements :
     * 1) extraction quotidienne des données dans API rest de twitter (et filtrage pour analyses spécifiques, ie uniquement les RT).
     * 2) annotation systématique avec les différents outils et constitution du fichier de travail.
     * 3) les analyses statistiques menées sur le fichier de travail
         ** analyse baromètrique ( heure et jour)
         ** corrélation des indicateurs
+
+A ce jour -j+18, la base primaire comporte 1.2 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go).
 
 L'idée est de tester sur ce corpus des instrument de mesure du sentiment de manière systématique. Dans ce contexte l'objectif de projet est d'évaluer dans quelle mesure, ces outils permettent de capter les variations des émotions de la population au fil des jours et des évènements et de l'actualité. Les différents indicateurs sont-ils convergents? Sont-il fiables et sensibles?
 
