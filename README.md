@@ -1,4 +1,4 @@
-# Observatoire du confinement
+# Laboratoire du confinement
 
 Ce repo contient les éléments d'une analyse en continu d'un fil de tweet défini par l'usage du hashtag #confinementJour1 à #confinementJour_n. A j+15 elle comporte 1.1 millions de tweet, rt et quote.
 Un extrait (df_sample) est disponible dans le repo pour tester les proc. (le fichier entier dépasse la limite des 50mo, il en fait 1,3Go).
@@ -13,7 +13,7 @@ Quelques questions à explorer:
 
  * Construire une [frise chronologique](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) des principaux évenements 
  * La dimension spatiale via la geolocalisation des tweets
- * Le traitement des emojis ( Sophie Balech)
+ * Le traitement des emojis ( Sophie Balech)[https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html]
  * L'analyse des auto-corrélations et corrélations croisées (ts)
  * L'analyse par profils d'utisateurs (induction du genre, frequence de post, nb de followers)
  * Approche par LDA (Julien Monnot)
