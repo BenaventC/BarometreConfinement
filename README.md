@@ -18,7 +18,7 @@ En parallèle, une reflexion est engagée sur l'utilisation de cet intrument pou
 
 Le projet est ouvert, un petit groupe de travail s'est constitué spontanéement, on avance au jour le jour, pour y participer contactez en dm @benavent sur twitter. Le prochain rendez vous de travail sur #zoom est le mardi 8 avril à 14h). Les premiers membres du groupe sont  Sophie Balech (Amiens),  Michel Calciu (Lille), Julien Cloarec (Toulouse) , Valentin Mesa (Nanterre-mines), Christophe Benavent (Nanterre), Mehdi el Moukhliss(Toulouse), Jean-Fabrice Lebraty(Lyon), Pauline de Pechpeyrou (créteil), Yolaine Piris (Nantes), ...
 
-L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr et LIWC, on envisage des méthodes spécifiques et la vectorisation du corpus. Les premiers résultats sont [lisibles ici](https://benaventc.github.io/BarometreConfinement/confinement02_analyse.html)
+L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr et LIWC, on envisage des méthodes spécifiques et la vectorisation du corpus. Les premiers résultats sont [lisibles ici](https://benaventc.github.io/BarometreConfinement/LdC3_analyse_V01_bc.html)
 
 Quelques questions en cours d'exploration:
 
