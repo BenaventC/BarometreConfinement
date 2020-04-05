@@ -1,0 +1,198 @@
+---
+title: "confinement"
+author: "CB"
+date: "12 mars 2020"
+output: html_document
+---
+
+
+Ce script succède au script `DfC_extract_V01_bc` destiné à organisation la collecte et la compilation des données brutes de twitter, il a pour objet la systématisation des opération d'annotations.  
+
+
+# Les outils de l'analyse
+
+Le but de l'exercice est de mesurer le sentiment dans la période covid19 au travers des twits générés avec le hashtag #confinementjourxx qui signale clairement l'intention de donner son sentiment, son humeur, sa pensée, son expérience. 
+ 
+
+```{r setup, include=FALSE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(rtweet) #extraction twitter
+library(gridExtra) #associer des ggplot
+library(ggrepel) #pour une belle labelisation des xy
+library(igraph) #pour l'analyse de réseau
+library(wesanderson)
+library(scales) #pour les échelles de temps et de date
+library(syuzhet)     # ncr      
+library(tm)
+library(quanteda) #with quanteda
+library(ggridges)
+
+
+```
+
+
+```{r capt, include=TRUE}
+
+df<- readRDS(file = "df_17.rds") 
+
+```
+
+# L' évolution quantitative des tweets
+
+On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
+
+```{r desc1}
+## plot time series of tweets
+ts_plot(df, "1 hours", color="darkblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+```
+
+Une autre représentation de la série
+( correction à faire pour le jour)
+```{r Senti03}
+
+#construire des dates jour/heures
+
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # heure
+df$day2<-as.factor(df$day)
+ggplot(df,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
+
+#library(ggridges)
+
+df %>% filter(day>1 & day<16) %>%
+  ggplot(aes(x=hour, y=day2))+theme_minimal() + 
+  geom_density_ridges(scale=10) +
+  labs(title = 'distribution du sentiment')
+
+
+```
+
+# Annotations
+
+L'analyse du sentiment peut se faire avec plusieurs outils, on en retient pour l'instant trois, auxquels d'autres devraient être ajoutés (emoji, )
+
+ * le NCR avec le package [syuzhet](https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html)  On complète avec les émotions. 
+
+ * le #Liwc via quanteda et le dictionnaire en français.
+ * le lsdfr
+
+On en profite pour faire une analyse de fiabilité
+
+
+L'unité de temps est l'heure et la journée. 
+
+Un contrôle pour les calculs intermédiaires  en échantillonnant.
+```{r Senti01, include=FALSE}
+#Un contrôle pour les calculs intermédiaires  en échantillonnant.
+
+#df-sample<-  sample_n(df,100000)
+
+```
+
+
+## Méthode NRC
+
+### Procédure
+
+On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple.
+
+
+```{r Senti01}
+#require(syuzhet)            
+#prend bcp de temps 
+#paramétres
+phrase<-as.character(df$text)
+words<- get_tokens(phrase, pattern = "\\W")
+
+#extraction
+my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
+
+#ajout de la colonne sentiment au tableau de données général:
+sent<-as.data.frame(my_text_values_french1)
+df<-cbind(df,sent)
+
+#on sauvegarde pour réemploi ultérieur
+write_rds(df,"df_nrc17.rds")
+```
+
+Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
+
+
+On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
+https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+
+## Methode liwc
+
+le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
+
+Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. On retrouvera ici les [principales variables](https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir ref
+
+La procédure pour extraire ces notions est fort simple :
+
+```{r liwc01, fig.height=9}
+# the devtools package needs to be installed for this to work
+devtools::install_github("kbenoit/quanteda.dictionaries")
+
+library("quanteda.dictionaries")
+dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
+                             format = "LIWC")
+test<-liwcalike(df$text,dictionary = dict_liwc_french)
+df<-cbind(df,test)
+
+write_rds(df,"df_nrcliwc17.rds")
+
+```
+
+Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
+
+## Methode lsd
+
+Lexicoder
+
+https://www.poltext.org/fr/donnees-et-analyses/lexicoder
+
+
+## Méthodes sur mesure
+
+Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère par ses dictionnaires, on peut être tenté d'en construire un propre au corpus. Mieux on peut généraliser l'idée en abandonnant la valence pour crée des indicateurs plus topicaux. 
+
+Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
+
+
+```{r Senti03, include=TRUE}
+my_text <- df$text
+method <- "custom"
+custom_lexicon <- data.frame(word=c("course", "shopping", "queue", "masque","un mètre",
+                                    "distance sociale","commerce","supermarché","superette","marché",
+                                    "faire ses courses", "employé","caissière", "carrefour", "leclerc",
+                                    "Intermarché", "franprix","monoprix" ),
+                             value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
+custom_distrib <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
+
+custom_distrib<-as.data.frame(custom_distrib)
+ggplot(custom_distrib,aes(x=custom_distrib))+geom_histogram()+scale_y_log10()
+```
+
+##le traitement des emojis.
+
+ c'est une question essentielle mais résolue par [Sophie Balech]() .....
+
+## Approche via ML
+
+mais quelle variable à prédire? l'annotation manuelle est difficile, pas de note associée, seulement des mesures de succès (rt, reply), 
+
+
+##Références :

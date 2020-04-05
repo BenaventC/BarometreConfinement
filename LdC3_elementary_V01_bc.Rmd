@@ -1,0 +1,114 @@
+---
+title: "Barometre du confinement : les acteurs et leur production"
+author: "CB"
+date: "31 mars 2020"
+output:
+  html_document: default
+  word_document: default
+---
+
+
+Une collection de tweets mais quelle population? Quels acteurs?
+
+Des analyse descriptive pour mieux cerner la population qui produit le flux des tweets collectés. 
+
+# Les outils de l'analyse
+
+A cette fin on utilise les packages suivant.
+
+```{r setup, include=FALSE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(rtweet) #extraction twitter
+library(gridExtra) #associer des ggplot
+library(ggrepel) #pour une belle labelisation des xy
+library(igraph) #pour l'analyse de réseau
+library(wesanderson)
+library(scales) #pour les échelles de temps et de date
+library(syuzhet)     # ncr      
+library(tm)
+library(quanteda) #with quanteda
+
+```
+
+## La collecte des données
+
+
+```{r capt, include=TRUE, echo=FALSE}
+
+df_nrc<- readRDS(file = "df_nrcliwc.rds") 
+
+df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
+ggplot(df_nrc,aes(x=day))+geom_bar(fill="firebrick")+theme_minimal()
+df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
+ggplot(df_nrc,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
+df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
+ggplot(df_nrc,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
+
+df_nrc$year<-2020 # heure
+df_nrc$day2<-as.factor(df_nrc$day)
+
+```
+
+```{r capt2, include=TRUE, echo=FALSE}
+
+
+ggplot(df_nrc,aes(x=is_quote))+geom_bar(fill="firebrick")+theme_minimal()
+ggplot(df_nrc,aes(x=is_retweet))+geom_bar(fill="firebrick")+theme_minimal()
+ggplot(df_nrc,aes(x=is_retweet))+geom_bar(fill="firebrick")+theme_minimal()
+ggplot(df_nrc,aes(x=source))+geom_bar(fill="firebrick")+theme_minimal()+coord_flip()
+```
+
+Examinons la distribution des indicateurs d'engagement, on selectionne les tweets qui ne sont ni des retweet ni des des qotes ni des answer, donc les tweet primaires, ceux qui sont la racine d'une propagation. :
+
+
+```{r capt3, include=TRUE, echo=FALSE}
+foo<-df_nrc %>% filter (is_quote==FALSE & is_retweet==FALSE)
+
+g1<-ggplot(foo,aes(x=favorite_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g1
+g2<-ggplot(df_nrc,aes(x=retweet_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g2
+g3<-ggplot(df_nrc,aes(x=quote_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g3
+g4<- ggplot(df_nrc,aes(x=reply_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g4
+```
+
+```{r capt4, include=TRUE, echo=FALSE}
+
+()
+
+
+df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
+ggplot(df_nrc,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
+df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
+ggplot(df_nrc,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
+
+df_nrc$year<-2020 # heure
+df_nrc$day2<-as.factor(df_nrc$day)
+
+```
+
+
+## L' évolution quantitative des tweets
+
+On retrace ici la production quotidiennes des tweets, rt quotes et reply. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html).
+
+On observe un effet d'usure, un rebond le dimanche, et un cycle quotidien. Aux premiers jours il semble qu'on postait plus le matin que le soir, après quelques jours la tendance s'est renversée.
+
+```{r desc1}
+## plot time series of tweets
+ts_plot(df_nrc, "1 hours", color="darkblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+
+```
+

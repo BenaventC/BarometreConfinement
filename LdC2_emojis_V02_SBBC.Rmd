@@ -1,0 +1,224 @@
+---
+title: "Analyse des emoji du confinement"
+author: "Sophie Balech - Université d'Amiens"
+date: "01/04/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+
+library(tidyverse)
+#library(devtools)
+#devtools::install_github("clauswilke/ggtext")
+library(ggtext)
+#devtools::install_github("hadley/emo")
+library(emo)
+library(textreadr)
+library(rvest)
+library(prismatic)
+library(TSstudio)
+library(lubridate)
+
+```
+
+L'objectif ici est d'exploiter les émoticônes et émojis présents dans un corpus (de tweets).
+
+# Les données
+
+On utilise les tweets du corpus #confinement, ici le fichier df_sample
+
+```{r data}
+licws<- sample_n(liwc,100000)
+```
+
+
+# Les émojis
+On utilisera les library 'ggtext' et 'emo' pour récupérer le dictionnaire des émojis et des caractères encodés et pour les afficher dans GGPlot. On s'inspirera très largement de ce site[https://www.hvitfeldt.me/blog/real-emojis-in-ggplot2/] pour le code.
+
+La difficulté vient du fait que GGPlot ne sait pas afficher des images. On va donc chercher en ligne les images représentants les émojis pour les intégrer au graphique. On construit pour cela deux fonctions, et grâce au package 'ggtext' on pourra afficher les images correspondantes :
+
+```{r emojis_function}
+
+emoji_to_link <- function(x) {
+  paste0("https://emojipedia.org/emoji/",x) %>%
+    read_html() %>%
+    html_nodes("tr td a") %>%
+    .[1] %>%
+    html_attr("href") %>%
+    paste0("https://emojipedia.org/", .) %>%
+    read_html() %>%
+    html_node('div[class="vendor-image"] img') %>%
+    html_attr("src")
+}
+
+link_to_img <- function(x, size = 25) {
+  paste0("<img src='", x, "' width='", size, "'/>")
+}
+
+```
+
+Grâce au package 'emo', on extrait facilement des tweets les emojis présentes et on peut les représenter graphiquement :
+
+```{r emojis, fig.height=8}
+happy_emojis <- licws %>%
+  mutate(emoji = emo::ji_extract_all(text)) %>%  #on extrait les emojis sous forme de liste
+  unnest(cols = c(emoji)) %>% #on crée une ligne par émoji
+  count(emoji, sort = TRUE) #on compte les occurrences
+
+top_happy <- happy_emojis %>%
+  slice(1:25) %>% #on ne garde que les 10 émojis les plus fréquents
+  mutate(url = map_chr(emoji, slowly(~emoji_to_link(.x), rate_delay(1))),
+         label = link_to_img(url)) #on récupère les images correspondantes en ligne
+
+
+offset <- max(top_happy$n) / 20 #pour la position des émojis sur le graphique
+
+
+#Le graphique :
+top_happy %>%
+  ggplot(aes(fct_reorder(emoji, n, .desc = FALSE), n, label = label, fill=label)) +
+  geom_col() +
+  geom_richtext(aes(y = n + offset), fill = NA, label.color = NA,
+                label.padding = grid::unit(rep(0, 4), "pt")
+  ) +
+  theme(axis.ticks.x = element_blank(),
+        axis.text.x = element_blank()) +
+  theme_minimal()+
+  coord_flip()+
+  theme(axis.text.x = element_markdown(),legend.position = "NONE") +
+  labs(x = NULL, y = "Count", 
+       title = "Emojis used in (small sample) of confinement tweets",
+       caption = "\nSource: Data collected by ObsduConfinement from Twitter's REST API via rtweet")
+
+
+```
+
+
+
+# Evolution temporelle
+
+Bon, là c'est un essai, je n'arrive pas à utiliser ts_plot + ggplot...pas de souci, j'utilise ça juste pour un crontrôle de notre population . Le package scles permet celà.
+
+rep : il faut jouer les le posixct.....
+
+```{r pressure, echo=FALSE}
+#####
+foo<- df_nrc %>% group_by(month,day) %>% 
+  mutate(n=1) %>%   
+  summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
+foo$date<-paste0("2020","-",foo$month,"-",foo$day)
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d"))
+
+foo<-foo %>% ungroup %>%select(date2,ami, famille, humain )
+foo<-melt(foo,id=c("date2"))
+
+emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
+
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,show.legend = FALSE,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 90, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(method = "gam" , aes(color=variable), size=1.5)+
+  labs(title="La thématique des proches des tweets #ConfinementJour", y="Intensité moyenne (par 24h)",x=NULL,caption= " \nSource: Data collected by Benavent C. \n from Twitter's REST API via rtweet \n and processed with Liwc & tidyverse \n=911959")+  
+  scale_color_manual(values=emocol)+facet_wrap(vars(variable),ncol=3)+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+#####################################
+
+emo<-licws %>%
+  mutate(emoji = emo::ji_extract_all(text)) %>%
+  unnest(cols=c(emoji))%>%
+  filter(emoji==top_happy$emoji)
+
+emo<-emo%>%
+  mutate(day=day(created_at))%>%
+  group_by(day)%>%
+  count(emoji,sort=T)
+
+
+time_happy <- emo %>%
+  mutate(url = map_chr(emoji, slowly(~emoji_to_link(.x), rate_delay(1))),
+         label = link_to_img(url))
+
+time_happy%>%
+  ggplot(aes(day,n,group=label,color=label))+
+  geom_line()+
+  geom_point()+
+  theme(legend.text = element_markdown())
+
+
+
+```
+
+# Analyse du sentiment
+
+On pourrait utiliser du machine learning couplé à l'analyse du sentiment des textes, là on utilise un dictionnaire des sentiments des emojis fait par P. Kralj Novak, J. Smailovic, B. Sluban, I. Mozetic [http://kt.ijs.si/data/Emoji_sentiment_ranking/index.html]. Ils ont constitué un set d'émojis et les ont associés avec un score de sentiment. malheureusement, tous les emojis de notre corpus ne sont pas annotés dans ce dictionnaire...
+
+On va récupérer le dictionnaire directement en ligne, on l'associe avec notre fichier des emojis (merci à today-is-a-good-day[https://github.com/today-is-a-good-day/emojis/blob/master/emoji_analysis.R]), et c'est parti.
+
+```{r emojis_sentiment}
+
+url <- "http://kt.ijs.si/data/Emoji_sentiment_ranking/index.html"
+
+# get emoticons
+emojis_raw <- url %>%
+  read_html() %>%
+  html_table() %>%
+  data.frame() %>%
+  select(-Image.twemoji., -Sentiment.bar.c.i..95..)
+names(emojis_raw) <- c("char", "unicode", "occurrences", "position", "negative", 
+                       "neutral", "positive", "sentiment_score", "description", 
+                       "block")
+
+
+emo_sent <- licws %>%
+  mutate(day=day(created_at))%>%
+  mutate(emoji = emo::ji_extract_all(text))%>%
+  unnest(cols = c(emoji))%>%
+  inner_join(emojis_raw, by=c("emoji"="char"))
+
+# Les tweets les plus négatifs
+emo_sent%>%
+  group_by(text)%>%
+  summarise(sentiment=sum(sentiment_score))%>%
+  ungroup()%>%
+  arrange(sentiment)%>%
+  head(10)
+
+
+# Les tweets les plus positifs
+emo_sent%>%
+  group_by(text)%>%
+  summarise(sentiment=sum(sentiment_score))%>%
+  ungroup()%>%
+  arrange(sentiment)%>%
+  tail(10)
+
+
+#Graphique de l'évolution du sentiment moyen dans le temps
+
+emo_sent%>%
+  group_by(day)%>%
+  summarise(sentiment=mean(sentiment_score))%>%
+  arrange(sentiment)%>% filter(day>1) %>%
+  ggplot(aes(day,sentiment))+
+  geom_line(color="darkblue")+
+  geom_point()+
+  theme_light()+
+  labs(x = "Day", y = "Mean sentiment expressed by emojis in 'confinement' tweets", 
+       title = "Evolution of sentiment expressed in (small sample) of 'confinement' tweets",
+       caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet")
+  
+
+```
+
+# Nuage d'emojis
+
+Bon, ça j'ai pas encore trouvé...
+
+```{r emojiscloud}
+
+library(wordcloud)
+
+wordcloud(happy_emojis$emoji, happy_emojis$n)
+
+```
+

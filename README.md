@@ -16,17 +16,18 @@ L'idée est de tester sur ce corpus des instrument de mesure du sentiment de man
 
 En parallèle, une reflexion est engagée sur l'utilisation de cet intrument pour tester des hypothèses plus théoriques (ie : une théorie de l'adaptation par exemple se traduisant par un cycle stupéfaction/habituation/élaboration)
 
-Le projet est ouvert, un petit groupe de travail s'est constitué spontanéement, on avance au jour le jour, pour y participer contactez en dm @benavent sur twitter. Le prochain rendez vous de travail sur #zoom est le mardi 8 avril à 14h). Les premiers membres du groupe sont  Julien Cloarec,Sophie Balech, Valentin, Christophe Benavent, Michel Calciu, Mehdi el Moukhliss, Jean-Fabrice Lebraty, Pauline de Pechpeyrou, Yolaine Piris, 
+Le projet est ouvert, un petit groupe de travail s'est constitué spontanéement, on avance au jour le jour, pour y participer contactez en dm @benavent sur twitter. Le prochain rendez vous de travail sur #zoom est le mardi 8 avril à 14h). Les premiers membres du groupe sont  Sophie Balech (Amiens),  Michel Calciu (Lille), Julien Cloarec (Toulouse) , Valentin Mesa (Nanterre-mines), Christophe Benavent (Nanterre), Mehdi el Moukhliss(Toulouse), Jean-Fabrice Lebraty(Lyon), Pauline de Pechpeyrou (créteil), Yolaine Piris (Nantes), ...
 
 L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr et LIWC, on envisage des méthodes spécifiques et la vectorisation du corpus. Les premiers résultats sont [lisibles ici](https://benaventc.github.io/BarometreConfinement/confinement02_analyse.html)
 
-Quelques questions à explorer:
+Quelques questions en cours d'exploration:
 
  * Construire une [frise chronologique](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) des principaux évenements 
  * La dimension spatiale via la geolocalisation des tweets
- * Le traitement des emojis-  [Sophie Balech](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)
+ * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
  * L'analyse des auto-corrélations et corrélations croisées (ts)
- * L'analyse par profils d'utisateurs (induction du genre, frequence de post, nb de followers)
+ * L'analyse par profils d'utisateurs (induction du genre, fréquence de post, nb de followers)
  * Approche par LDA (Julien Monnot)
- * Mesures spécifiques de l'ennui, de la peur, de la solitude, de la consommation.... (sur-mesure à partir de lexiques home made et de word2vec) - (Valentin Mesa)
+ * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
  * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
+ * dashboard : avec [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/using.html#components) 

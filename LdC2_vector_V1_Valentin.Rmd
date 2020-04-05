@@ -1,0 +1,46 @@
+---
+title: "Vectorisation"
+author: "CB"
+date: "1 avril 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## L'objectif de la vectorisation :
+
+Un outil pour constituer des dictionnaires spécifiques. Pour le corpus Confinementjour les thèmes de prédictions sont les marqueurs de l'expérience du confinement :
+
+ - l'ennui
+ - la peur
+ - l'ironie
+ - agrements et désagrément du teletravail
+ - le rapports aux enfants
+ - la déréalisation , science fiction
+ - l'approvisionnement et l'alimentation 
+ 
+ l'enjeu : retrouver les termes qui se rapproche le plus du concept que l'on cherche à cerner.
+ 
+ Processus : 
+ 1) analyse quali des tweet et définition des thèmes
+ 2) établissement d'un petits nombre de mots cible, utilisation de la synonymie ( Wolf, https://wonef.fr/contact/)
+ 3) recherche des vecteurs les plus proches et 
+ 4) réitération en deux
+ 
+ On travaille sur des lemmes.
+ 
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
