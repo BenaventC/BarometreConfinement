@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 Ce script succède et vient en complément au script `LdC2_annotation_V01_bc.Rmd` qui associe des annotations au tweets à partir de trois méthodes et/ou dictionnaires NCR, LIWC et LSD. 
 
-Les scripts proposés cherchent à accélérer les calculs d'annotation car cela sont les plus lourds et constituent un goulot d'étranglement a ce stade des analyses. 
+Les scripts proposés cherchent à accélérer les calculs d'annotation car ceux-là sont les plus lourds et constituent un goulot d'étranglement a ce stade des analyses. 
 
 Deux pistes sont exploitées:
 
@@ -46,10 +46,10 @@ svtexte=split(as.character(df$text),fsplit[1:lenvtxt])
 
 ```
 
-#### MAP: mappage parallèle de la fonction les sentiments NRC au textes 
+#### MAP: mappage parallèle de la fonction qui associe des catégories de sentiments NRC au textes 
 
 La fonction mclapply mappe (affecte) l'annotation des sentiments NRC aux segments (chunks) de tweets produisant comme résultat une liste de tableaux qui contiennent de frequence des catégories de sentiments trouvés dans chaque texte. Dans la liste il y a autant de tableaux qu’il y a de cœurs.  
-Comme c'est ici que se concentre les calculs lourds nous y ajouté une fonctionalité (system.time) qui calcule leur durée 
+Comme c'est ici que se concentre les calculs lourds nous y avons ajouté une fonctionalité (system.time) qui calcule leur durée 
 
 ```{r}
 print(system.time(
@@ -57,7 +57,7 @@ print(system.time(
 ))
 ```
 
-#### REDUCE: regroupe les morceaux
+#### REDUCE: regroupe les morceaux qui avaient été affectés à chaque cœur
 
 L’étape REDUCE regroupe la liste de tableaux d’annotation en un seul tableau en les empilant un sur l’autre ligne par ligne.
 
@@ -78,6 +78,10 @@ write_rds(df_nrc,"df_nrc.rds")
 
 ### Calcul parallèle sur un cluster
 
+Il s'agit d'un cluster d'ordinateurs ou cluster HPC (High Performance Computing) de type grille de calcul du notre méso-centre de l'unversité. Les calculs sur le Cluster s'effectuent par l'intermédiaire d'un gestionnaire de travaux qui s'occupe de gérer la file d'attente et de lancer les calculs lorsque les ressources demandées sont disponibles.
+
+Le gestionnaire de travaux du Cluster est SLURM (Simple Linux Utility for Resource Management).
+
 On mobilise les packages necessaires. S'ajoute ici le package rslurm
 
 ```{r}
@@ -93,7 +97,8 @@ Comme la lecture des donnée et leur morcèlement (split) sont rapides, Cette ph
 
 #### MAP: mappage parallèle de la fonction les sentiments NRC au textes 
 
-La fonction slurm_apply est un genre d'envoppe pour mclapply du package parallel et dispatch les memes opérations sur le cluster d'ordinateurs  
+La fonction "slurm_apply" est un genre d'enveloppe pour "mclapply" du package "parallel" et dispatche les mêmes opérations sur le cluster d'ordinateurs  
+
 
 ```{r}
 sjob <- slurm_apply(function(i) get_nrc_sentiment(svtexte[[i]], language="french") ,
