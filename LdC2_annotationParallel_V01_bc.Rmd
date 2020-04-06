@@ -1,0 +1,120 @@
+---
+title: "confinement"
+author: "M. Calciu"
+date: "4/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Ce script succède et vient en complément au script `LdC2_annotation_V01_bc.Rmd` qui associe des annotations au tweets à partir de trois méthodes et/ou dictionnaires NCR, LIWC et LSD. 
+
+Les scripts proposés cherchent à accélérer les calculs d'annotation car cela sont les plus lourds et constituent un goulot d'étranglement a ce stade des analyses. 
+
+Deux pistes sont exploitées:
+
+- 1) calcul parallèle sur un ordinateur de travail 
+- 2) calcul parallèle sur un cluster d’ordinateurs
+
+ 
+## Accélération de calculs d’annotation pour l’association de sentiments aux tweets
+
+Sont développées et actualisées quelques méthodes de calcul des BigData présentées en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que nous avons appelée « GRAPPA » un clin d'œil  à la boisson qui nous a inspiré là-bas. Il s'agit de combiner l'approche MapReduce qui a démocratisé les calculs BigData avec les solutions de calcul parallel disponibles.
+
+### Calcul parallèle sur un ordinateur
+
+On mobilise les packages necessaires
+
+```{r}
+library(parallel)
+library(readr)
+library(syuzhet)# ncr
+```
+
+#### SPLIT des données
+Après avoir chargé les données collectées, on divise  (split ) l’ensemble des tweets  en morceaux (chunks) de taille égale afin de les affecter à chacun des cœurs du processeur de l’ordinateur pour les traiter en parallèle.
+
+```{r}
+df <- readRDS("df.rds")
+ncores = detectCores()-1 
+lenvtxt <- nrow(df)
+
+fsplit = rep(1:ncores, each=round(lenvtxt/ncores+.5,0))
+svtexte=split(as.character(df$text),fsplit[1:lenvtxt])
+
+```
+
+#### MAP: mappage parallèle de la fonction les sentiments NRC au textes 
+
+La fonction mclapply mappe (affecte) l'annotation des sentiments NRC aux segments (chunks) de tweets produisant comme résultat une liste de tableaux qui contiennent de frequence des catégories de sentiments trouvés dans chaque texte. Dans la liste il y a autant de tableaux qu’il y a de cœurs.  
+Comme c'est ici que se concentre les calculs lourds nous y ajouté une fonctionalité (system.time) qui calcule leur durée 
+
+```{r}
+print(system.time(
+ resnrc <- mclapply(1:ncores, function(i) get_nrc_sentiment(svtexte[[i]], language="french"))
+))
+```
+
+#### REDUCE: regroupe les morceaux
+
+L’étape REDUCE regroupe la liste de tableaux d’annotation en un seul tableau en les empilant un sur l’autre ligne par ligne.
+
+```{r}
+resnrc <- Reduce(rbind, resnrc)
+
+```
+
+#### Sauvegarde 
+
+
+```{r}
+df_nrc <- cbind(df,resnrc)
+write_rds(df_nrc,"df_nrc.rds")
+
+```
+
+
+### Calcul parallèle sur un cluster
+
+On mobilise les packages necessaires. S'ajoute ici le package rslurm
+
+```{r}
+library(rslurm)
+library(parallel)
+library(readr)
+library(syuzhet)# ncr
+```
+
+#### SPLIT des données
+
+Comme la lecture des donnée et leur morcèlement (split) sont rapides, Cette phase reste identique qu'il s’agisse d’un ordinateur ou d’un cluster.
+
+#### MAP: mappage parallèle de la fonction les sentiments NRC au textes 
+
+La fonction slurm_apply est un genre d'envoppe pour mclapply du package parallel et dispatch les memes opérations sur le cluster d'ordinateurs  
+
+```{r}
+sjob <- slurm_apply(function(i) get_nrc_sentiment(svtexte[[i]], language="french") ,
+        data.frame(i=seq_along(svtexte)),
+        add_objects = c("get_nrc_sentiment","svtexte"),
+        jobname = 'nrc_apply',
+        nodes = 2, 
+        cpus_per_node = 2, submit = FALSE)
+
+```
+
+#### REDUCE: regroupe les morceaux
+
+L’étape REDUCE regroupe les résultats du job slurm lancées sur le clustar auparavant
+
+```{r}
+resnrc <- get_slurm_out(sjob, outtype = 'table')
+```
+
+#### Sauvegarde 
+
+Est identique pour l'ordinateur ou pour le cluster
+
+
