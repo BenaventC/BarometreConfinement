@@ -31,62 +31,100 @@ library(quanteda) #with quanteda
 
 ```
 
-## La collecte des données
+```{r Senti03}
+
+#construire des dates jour/heures
+
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # heure
 
 
-```{r capt, include=TRUE, echo=FALSE}
+df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
 
-df_nrc<- readRDS(file = "df_nrcliwc.rds") 
+ggplot(df,aes(x=Jour))+
+  geom_bar(fill="gold4")+ 
+  theme_minimal()+ 
+  labs(title="# de tweets par jour")+
+  facet_wrap(vars(is_retweet),ncol=1,scales="free")
 
-df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
-ggplot(df_nrc,aes(x=day))+geom_bar(fill="firebrick")+theme_minimal()
-df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
-ggplot(df_nrc,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
-df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
-ggplot(df_nrc,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
 
-df_nrc$year<-2020 # heure
-df_nrc$day2<-as.factor(df_nrc$day)
+
+#library(ggridges)
+
+foo<-df %>% filter(Jour>1 & Jour<23)
+foo$Jour<-as.factor(foo$Jour)
+
+ggplot(foo,aes(x=hour, y=Jour))+theme_minimal() + 
+  geom_density_ridges(scale=4, fill="pink") +
+  labs(title = 'distribution du sentiment')
+
+
+# par jour
+
+
+ggplot(df,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
+
+ggplot(df,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()+facet_wrap(vars(is_retweet),ncol=1,scales="free")
 
 ```
+
+## Tweets et Retweets
+
+Il est peut-être préférable d'enlever les retweets, pour ne garder que des contenus avec du texte original. 
+
+Un developpement serait de reconstituter les chaines de tweets.
+
+Mais d'abord une approche descriptive.
 
 ```{r capt2, include=TRUE, echo=FALSE}
-
-
-ggplot(df_nrc,aes(x=is_quote))+geom_bar(fill="firebrick")+theme_minimal()
-ggplot(df_nrc,aes(x=is_retweet))+geom_bar(fill="firebrick")+theme_minimal()
-ggplot(df_nrc,aes(x=is_retweet))+geom_bar(fill="firebrick")+theme_minimal()
-ggplot(df_nrc,aes(x=source))+geom_bar(fill="firebrick")+theme_minimal()+coord_flip()
+#citations
+ggplot(df,aes(x=is_quote))+geom_bar(fill="firebrick", position="stack")+theme_minimal()
+#retweets
+ggplot(df,aes(x=is_retweet))+geom_bar(fill="firebrick")+theme_minimal()
+#device
+#ggplot(df,aes(x=resource))+geom_bar(fill="firebrick")+theme_minimal()+coord_flip()
 ```
 
-Examinons la distribution des indicateurs d'engagement, on selectionne les tweets qui ne sont ni des retweet ni des des qotes ni des answer, donc les tweet primaires, ceux qui sont la racine d'une propagation. :
+Examinons la distribution des indicateurs d'engagement, on selectionne les tweets qui ne sont ni des retweet ni des des quotes ni des réponses, donc les tweet primaires, ceux qui sont la racine d'une propagation. :
 
 
-```{r capt3, include=TRUE, echo=FALSE}
-foo<-df_nrc %>% filter (is_quote==FALSE & is_retweet==FALSE)
+```{r tw01, }
+library(scales)
+foo<-df %>% filter (is_quote==TRUE & is_retweet==FALSE)
 
-g1<-ggplot(foo,aes(x=favorite_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g1<-ggplot(foo,aes(x=favorite_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()+ scale_y_log10()
 g1
-g2<-ggplot(df_nrc,aes(x=retweet_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g2<-ggplot(foo,aes(x=retweet_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10() +scale_y_log10()
 g2
-g3<-ggplot(df_nrc,aes(x=quote_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g3<-ggplot(foo,aes(x=quote_count))+geom_histogram(fill="firebrick")+theme_minimal()
 g3
-g4<- ggplot(df_nrc,aes(x=reply_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()
+g4<- ggplot(foo,aes(x=reply_count))+geom_histogram(fill="firebrick")+
+  theme_minimal()
 g4
+g5<- ggplot(foo,aes(x=display_text_width ))+geom_bar( fill="firebrick")+
+  theme_minimal()
+g5
+g6<- ggplot(df,aes(x=lang))+geom_bar(fill="firebrick")+
+  theme_minimal()+ coord_flip()
+g6
+foo$media_type<- as.factor(foo$media_type)
+g6<- ggplot(df,aes(x=media_type))+geom_bar(fill="firebrick")+
+  theme_minimal()+ coord_flip()
+g6
+
 ```
 
 ```{r capt4, include=TRUE, echo=FALSE}
 
-()
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+ggplot(df,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+ggplot(df,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
 
-
-df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
-ggplot(df_nrc,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
-df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
-ggplot(df_nrc,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
-
-df_nrc$year<-2020 # heure
-df_nrc$day2<-as.factor(df_nrc$day)
+df$year<-2020 # heure
+df$day2<-as.factor(df$day)
 
 ```
 
@@ -99,7 +137,7 @@ On observe un effet d'usure, un rebond le dimanche, et un cycle quotidien. Aux p
 
 ```{r desc1}
 ## plot time series of tweets
-ts_plot(df_nrc, "1 hours", color="darkblue") +
+ts_plot(foo, "1 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(

@@ -47,9 +47,9 @@ ATTENTION : il y a un risque de doublon pour J9.( je dois vérifier). Le jour 15
 La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
 
 ```{r capt, include=TRUE}
-#foo<- df %>% filter(user_id=="1")
+foo<- df_17 %>% filter(user_id=="1")
 
-x<-c("#ConfinementJour18")
+x<-c("#ConfinementJour22")
 
 
 for (val in x) {
@@ -57,9 +57,9 @@ tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
 
 foo<-rbind(foo,tweets)
 }
-df1<-foo
+df21<-foo
 
-write_rds(tweets,"df_consoj18.rds")
+write_rds(tweets,"df_consoj22.rds")
 
 df1_8<- readRDS(file = "df_conso.rds") 
 df9<-readRDS(file = "df_consoj9.rds")
@@ -72,11 +72,15 @@ df15c<-readRDS(file = "df_consoj15c.rds")
 df16<-readRDS(file = "df_consoj16.rds")
 df17<-readRDS(file = "df_consoj17.rds")
 df18<-readRDS(file = "df_consoj18.rds")
+df1920<-readRDS(file = "df_consoj1920.rds")
+df21<-readRDS(file = "df_consoj21.rds")
+df22<-readRDS(file = "df_consoj22.rds")
 
-df_17<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
-write_rds(df_17,"df_17.rds")
 
-sample<-readRDS(file="df_17.rds")
+df_22<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df1920,df21,df22) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
+write_rds(df_22,"df_22.rds")
+
+sample<-readRDS(file="df_22.rds")
 sample<- sample_n(sample,70000)
 write_rds(sample,"df.rds")
 
@@ -88,7 +92,7 @@ On retrace ici la production des tweets, rt et comment d"heure en heure ce qui p
 
 ```{r desc1}
 ## plot time series of tweets
-ts_plot(df_17, "1 hours", color="darkblue") +
+ts_plot(df_22, "1 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(

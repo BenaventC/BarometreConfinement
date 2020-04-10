@@ -34,7 +34,7 @@ library(ggridges)
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_17.rds") 
+df<- readRDS(file = "df_22.rds") 
 
 ```
 
@@ -59,26 +59,7 @@ ts_plot(df, "1 hours", color="darkblue") +
 
 Une autre représentation de la série
 ( correction à faire pour le jour)
-```{r Senti03}
 
-#construire des dates jour/heures
-
-df$day<-as.numeric(format(df$created_at, "%d")) # jour
-df$month<-as.numeric(format(df$created_at, "%m")) # mois
-df$hour<-as.numeric(format(df$created_at, "%H")) # heure
-df$year<-2020 # heure
-df$day2<-as.factor(df$day)
-ggplot(df,aes(x=day))+geom_bar(fill="gold3")+ theme_minimal()+ theme_minimal()
-
-#library(ggridges)
-
-df %>% filter(day>1 & day<16) %>%
-  ggplot(aes(x=hour, y=day2))+theme_minimal() + 
-  geom_density_ridges(scale=10) +
-  labs(title = 'distribution du sentiment')
-
-
-```
 
 # Annotations
 
@@ -94,11 +75,22 @@ On en profite pour faire une analyse de fiabilité
 
 L'unité de temps est l'heure et la journée. 
 
-Un contrôle pour les calculs intermédiaires  en échantillonnant.
+On se concentrera sur les tweets informatifs : les tweets originaux et les qoutes, on elimine donc les retweets. Ultérieurement il sera intéressant de comparer les deux sous corpus. Le premier reflète la production primaire et originale, de ceux assez engagés pour faire l'effort de produire un contenu. Le second reflète la propagation des idées diffusées dans par le premier et les préférences des utilisateurs moins engagés, les "transmetteurs". Ils ont le pouvoir de propager certains contenu audelà de leur audience immédiates et peuvent ainsi déformer la distribution des contenus.
+
 ```{r Senti01, include=FALSE}
 #Un contrôle pour les calculs intermédiaires  en échantillonnant.
 
-#df-sample<-  sample_n(df,100000)
+df<-df %>% filter(is_retweet==FALSE)
+## plot time series of tweets
+ts_plot(df, "1 hours", color="darkblue") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 ```
 
@@ -125,7 +117,7 @@ sent<-as.data.frame(my_text_values_french1)
 df<-cbind(df,sent)
 
 #on sauvegarde pour réemploi ultérieur
-write_rds(df,"df_nrc17.rds")
+write_rds(df,"df_nrc.rds")
 ```
 
 Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
@@ -152,7 +144,7 @@ dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
 test<-liwcalike(df$text,dictionary = dict_liwc_french)
 df<-cbind(df,test)
 
-write_rds(df,"df_nrcliwc17.rds")
+write_rds(df,"df_nrcliwc.rds")
 
 ```
 
@@ -167,7 +159,7 @@ https://www.poltext.org/fr/donnees-et-analyses/lexicoder
 
 ## Méthodes sur mesure
 
-Si la notion de sentiment se rapporte à l'idée de valence (+/-) et diffère par ses dictionnaires, on peut être tenté d'en construire un propre au corpus. Mieux on peut généraliser l'idée en abandonnant la valence pour crée des indicateurs plus topicaux. 
+Si la notion de sentiment se rapporte à l'idée de valence (+/-) et que les instruments diffèrent par leurs dictionnaires, on peut être tenté d'en construire un propre au corpus et à ce que l'on souhaite observer. Mieux on peut généraliser l'idée en abandonnant la valence pour créer des indicateurs plus topicaux ( avec un index absence/présence). 
 
 Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
 
@@ -186,9 +178,31 @@ custom_distrib<-as.data.frame(custom_distrib)
 ggplot(custom_distrib,aes(x=custom_distrib))+geom_histogram()+scale_y_log10()
 ```
 
+
+Dans le cas du confinement, l'enjeu serait de caractériser l'expérience vécu. Ses facette principales sont a priori, mais l'analyse des études qualitatives proches de cette problématiques peuvent être utiles pour mieux en cerner les dimensions.
+
+Une analyse phénoménologique rapide en fait émerger quelques unes (à augmenter et mieux reclasser) :
+
+Comportement
+ * Travail :le travail qui soit se fait à distance soit dans des conditions de circulations fortement contraintes
+ * Education : S'occuper de la vie des enfants : écoles, aération, occupation, disputes....
+ * Socialité :Le rapport aux autres des proches éloignés au lointains rapprochés
+ * Organique : Le soin du corps et la sexualité, l'organique.
+ * Logistique : l'approvisionnement et l'alimentation
+ * Sécurité : les gestes de protection
+ 
+ Sentiment, émotions et états d'ames
+  * L'inoccupation et l'ennui
+ * La spatio-temporalité et la perte des repère ( désorientation)
+ * La catharsis, la distanciation par l'humour et l'irone, la tentation du contrôle par l'information.
+ * Les émotions
+ 
+ Cognition
+
+ 
 ##le traitement des emojis.
 
- c'est une question essentielle mais résolue par [Sophie Balech]() .....
+ c'est une question essentielle mais résolue par [Sophie Balech](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html) .....
 
 ## Approche via ML
 
