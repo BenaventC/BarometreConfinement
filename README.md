@@ -21,15 +21,15 @@ Le projet est ouvert, un petit groupe de travail s'est constitué spontanéement
 L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr et LIWC, on envisage des méthodes spécifiques et la vectorisation du corpus. Les premiers résultats sont [lisibles ici](https://benaventc.github.io/BarometreConfinement/LdC3_analyse_V01_bc.html)
 
 Quelques questions en cours d'exploration:
- * [Introduction](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
- * Construire une [frise chronologique](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) des principaux évenements 
- * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)
- * La dimension spatiale via la geolocalisation des tweets
- * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
- * L'analyse des auto-corrélations et corrélations croisées (ts)
- * L'analyse par [profils d'utisateurs]() (induction du genre, fréquence de post, nb de followers)
- * Approche par LDA (Julien Monnot)
- * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
- * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
- * dashboard : avec [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/using.html#components)
- * Parallélisation des calculs sur le cluster de l'([Université de Lille](http://hpc.univ-lille.fr/cluster-hpc-htc)) by Michel Calciu. ( gain : de 8h de calcul pour l'annotation à 8mn)
+  * [Introduction](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
+  * Construire une [frise chronologique](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) des principaux évenements 
+  * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)
+  * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
+  * L'analyse des auto-corrélations et corrélations croisées (ts). Nous avons besoin d'un économètre.
+  * L'analyse par [profils d'utisateurs]() (induction du genre, fréquence de post, nb de followers). c'est en cours
+  * Approche par LDA (Julien Monnot)
+  * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
+  * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
+  * dashboard : avec [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/using.html#components)
+  * Parallélisation des calculs sur le cluster de l'([Université de Lille](http://hpc.univ-lille.fr/cluster-hpc-htc)) by Michel Calciu. ( gain : de 8h de calcul pour l'annotation à 8mn)
+  * La dimension spatiale via la geolocalisation des tweets est une néçessité, nous n'avons pas de spécialiste encore.
