@@ -25,7 +25,7 @@ Le but de l'exercice est de mesurer le sentiment dans la période covid19 au tra
 C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. 
 
 ```{r setup, include=TRUE, echo=TRUE}
-knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE)
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE,  message = FALSE, warning=FALSE)
 library(tidyverse) #l'environnement de base : données et visus
 library(rtweet) #extraction twitter
 library(gridExtra) #associer des ggplot
@@ -46,10 +46,10 @@ ATTENTION : il y a un risque de doublon pour J9.( je dois vérifier). Le jour 15
 
 La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
 
-```{r capt, include=TRUE}
+```{r capt, include=TRUE, eval=FALSE}
 foo<- df_17 %>% filter(user_id=="1")
 
-x<-c("#ConfinementJour22")
+x<-c("#ConfinementJour19")
 
 
 for (val in x) {
@@ -57,10 +57,10 @@ tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
 
 foo<-rbind(foo,tweets)
 }
-df21<-foo
+df<-foo
 
-write_rds(tweets,"df_consoj22.rds")
-
+write_rds(tweets,"df_consoj19b.rds")
+#rattapper le j19
 df1_8<- readRDS(file = "df_conso.rds") 
 df9<-readRDS(file = "df_consoj9.rds")
 df10<-readRDS(file = "df_consoj10.rds")
@@ -72,15 +72,20 @@ df15c<-readRDS(file = "df_consoj15c.rds")
 df16<-readRDS(file = "df_consoj16.rds")
 df17<-readRDS(file = "df_consoj17.rds")
 df18<-readRDS(file = "df_consoj18.rds")
+df19b<-readRDS(file = "df_consoj19b.rds")
+
 df1920<-readRDS(file = "df_consoj1920.rds")
 df21<-readRDS(file = "df_consoj21.rds")
 df22<-readRDS(file = "df_consoj22.rds")
+df23<-readRDS(file = "df_consoj23.rds")
+df24<-readRDS(file = "df_consoj24.rds")
 
 
-df_22<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df1920,df21,df22) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
-write_rds(df_22,"df_22.rds")
+df_24<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
+write_rds(df_24,"df_24.rds")
 
-sample<-readRDS(file="df_22.rds")
+#on crée un échantillon 
+sample<-readRDS(file="df_24.rds")
 sample<- sample_n(sample,70000)
 write_rds(sample,"df.rds")
 
@@ -91,8 +96,10 @@ write_rds(sample,"df.rds")
 On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
 
 ```{r desc1}
+df_24<-readRDS(file = "df_24.rds")
+
 ## plot time series of tweets
-ts_plot(df_22, "1 hours", color="darkblue") +
+ts_plot(df_24, "3 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(

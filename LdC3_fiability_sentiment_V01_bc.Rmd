@@ -1,0 +1,276 @@
+---
+title: "Laboratoire du Confinement"
+subtitle: "Fiabilité du sentiment"
+author: "CB"
+date: "12 mars 2020"
+output: html_document
+---
+![](street-art-paris-zabou2.jpg)
+
+Ce script succède au script `LdC_annotation_V01_bc` destiné à calculer les core de sentiments par différentes méthodes. On en explore ici la fiabilité par analyse des corrélation, puis la fabrication d'un indice synthètique. 
+
+## Les outils de l'analyse
+
+Le but de l'exercice est de mesurer le sentiment dans la période covid19 au travers des twits générés avec le hashtag #confinementjourxx qui signale clairement l'intention de donner son sentiment, son humeur, sa pensée, son expérience. 
+ 
+
+```{r setup, include=TRUE, echo=TRUE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(rtweet) #extraction twitter
+library(gridExtra) #associer des ggplot
+library(ggrepel) #pour une belle labelisation des xy
+library(igraph) #pour l'analyse de réseau
+library(wesanderson)
+library(scales) #pour les échelles de temps et de date
+library(syuzhet)     # ncr      
+library(tm)
+library(quanteda) #with quanteda
+library(ggridges)
+library(corrplot)
+library(psych)
+library(reshape2)
+
+```
+
+Lecture du fichier annoté.
+
+```{r capt, include=TRUE}
+
+df<- readRDS(file = "df_lsd.rds") 
+
+```
+
+#  Analyse de la corrélation des indicateurs de sentiment
+
+Nous disponsons de 3 méthodes ( ou trois dictionnaires) dont la caractéristique est de mesurer de manière distincte la valence positive et la valence négative.
+
+ * nrc
+ * Lsd fr
+ * liwc
+ 
+ L'inspection visuelle de la matrice de corrélation montre que globalement les indicateurs de négativité sont intercorrélés, de même ceux de la positivité.
+
+```{r reliability1, fig.width=7}
+M<-subset(df, select=c(negative,émonég,Neg_lsdfr, positive,émopos,Pos_lsdfr))
+R <- cor(M)
+corrplot.mixed(R, order="hclust",number.cex=0.75, tl.cex=0.75)
+
+```
+
+Une analyse factorielle à deux composantes et rotation oblique, confirme la structure évidence : les trois méthodes vont dans le même sens. Mais les dimensions négative et positive sont largement indépendantes, seulement faiblement corrélées. Les opinions ne sont pas ou positive, ou négative ( négativement corrélée), elle peuvent l'être l'une et l'autre.
+
+On peut donc envisager d'autres indicateurs :
+
+ * un indicateur d'expressivité ( la somme des négatif et des positifs : Pos+Neg)
+ * un indicateur de polarité (la différence des deux indicateurs : Pos-Neg)
+
+
+```{r reliability2}
+
+# Maximum Likelihood Factor Analysis
+# entering raw data and extracting 3 factors,
+# with varimax rotation
+fit <- factanal(M,2, rotation="promax")
+print(fit, digits=2, sort=TRUE)
+
+```
+
+Un alpha de conbach montre le faible valeur au regard des standard psychométriques. Mais demande une réévaluation par la nature des données et l'échelle. Les valeurs standardisée sont de 0,68 et de 0.60.
+
+```{r reliability3}
+
+alpha<-alpha(M[,1:3])
+#t(alpha[["total"]])
+t(alpha[["alpha.drop"]])
+
+alpha<-alpha(M[,4:6])
+#t(alpha[["total"]])
+t(alpha[["alpha.drop"]])
+
+```
+
+Elargissons l'analyse aux émotions qui sont elles-mêmes certainement polarisées, à l'exception de la surprise et de l'anticipation qui sont aussi corrélés positivement  aux émotions négative.
+
+
+
+```{r reliability4, fig.width=7}
+
+
+M<-subset(df, select=c(Neg_lsdfr,émonég,negative,anger, disgust, fear, sadness,surprise,anticipation,trust,joy,positive,émopos,Pos_lsdfr))
+R <- cor(M)
+corrplot.mixed(R, order="hclust",number.cex=0.75, tl.cex=0.75)
+```
+
+Mais c'est finalement une solution à deux facteurs qui ressort. ( la solution à 3 facteurs est " dégénérée")
+
+```{r reliability5}
+
+# Maximum Likelihood Factor Analysis
+# entering raw data and extracting 3 factors,
+# with varimax rotation
+fit <- factanal(M,2, rotation="promax", scores = "regression")
+print(fit, digits=2, sort=TRUE)
+
+
+```
+les alphas de cronbach remontent en flèche, on est à 0.81 et 0,89 pour le négatif soit d'exellent score pour des mesures multiméthodes. Le sentiment standard doivent donc être construit de manière synthétique. 
+
+```{r reliability6}
+
+alpha<-alpha(M[,1:7])
+t(alpha[["total"]])
+alpha[["alpha.drop"]]
+
+alpha<-alpha(M[,8:14])
+t(alpha[["total"]])
+alpha[["alpha.drop"]]
+
+```
+## La stabilité des corrélations dans le temps
+
+Pour tester la stabilité de la structure dans le temps, on examine simplement les corrélations à trois moments : au 2ème , 8 ème et 20èmes jours. Elles ne bougent quasiment pas, la structure de corrélation est extrêmement stable.
+
+```{r reliability7, fig.width=7}
+
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # heure
+
+
+df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+Jour2 <- c(2,8,20)
+for (val in Jour2) {
+  M<-df %>% filter(Jour==val)%>%select(negative,émonég,Neg_lsdfr, positive,émopos,Pos_lsdfr)
+  R <- cor(M)
+  print(R)
+  corrplot.mixed(R, order="hclust",number.cex=0.75, tl.cex=0.75)
+}
+
+```
+
+## l'évolution des scores de sentiment 
+
+On calcule donc le sentiment à partir d'un simple index sous la forme d'une somme ( score total) (les alternatives sont de retenir les deux premiers facteur, mais on perd de l'information avec la normalisation). 
+
+On en calcule les moyennes horaires, tri-quotidiennes, et quotidiennes.
+
+### heure par heure
+
+On doit s'interroger sur le caractère stationnaire de la série mesurée à l'échelle de l'heure, même si on semble observé des pics à certain moment. L'aiguille s'affole--t-elle suite à certains évément? La courbe des sentiments positifs est plus heurtée que celle des négatifs. Dans une autre étude, nous aurons à explorer plus en profondeur la structure des auto et cross corrélations. 
+
+La stationnarité incite à penser à ce que le processus est dominé par une normes de styles que des chocs extérieurs pertubent le temps de quelques heures avant de retrouver une ligne de base.
+
+```{r score01, gig.width=9}
+sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopos+Pos_lsdfr , 
+                         negatif =Neg_lsdfr+émonég+negative,anger+disgust+fear+sadness ) %>% 
+  group_by(year,month,day,hour) %>% 
+  mutate(n=1) %>%
+  summarise(positif=mean(positif,na.rm=TRUE),negatif=mean(negatif, na.rm=TRUE), n=sum(n)) %>% ungroup()
+
+sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$hour,":00:00")
+
+sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
+
+foo<-sentevol%>%select(date2, negatif,positif)
+
+foo<-melt(foo, id=c("date2"))
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "gam")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Valence par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "1 day",minor_breaks=NULL, labels = scales::label_date_short())+ facet_wrap(vars(variable),ncol=1)+ theme(axis.title.x = element_text(size = .5, angle = 00))
+```
+
+# de 8 h en 8h 
+
+A cette échelle il semble qu'un cyclicité se manifeste pour les sentiments positifs.
+
+```{r score02, fig.width=7}
+df$ampm<-0
+
+df$ampm[df$hour<4 | df$hour>19]<-4
+df$ampm[df$hour>3 & df$hour<12 ]<-12
+df$ampm[df$hour>11 & df$hour<20 ]<-20
+
+ggplot(df, aes(x=ampm))+geom_bar()
+sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopos+Pos_lsdfr , 
+                         negatif =Neg_lsdfr+émonég+negative,anger+disgust+fear+sadness ) %>% 
+  group_by(year,month,day,ampm) %>% 
+  mutate(n=1) %>%
+  summarise(positif=mean(positif,na.rm=TRUE),negatif=mean(negatif, na.rm=TRUE), n=sum(n))
+
+sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$ampm,":00:00")
+sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H"))
+
+foo<-sentevol %>%ungroup()%>% select(date2, negatif,positif)
+
+foo<-melt(foo, id=c("date2"))
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+ 
+  stat_smooth( aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Valence par 6 heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+
+```
+
+### De jour en jour
+
+A l'échelle du jour des évolutions de plus long terme semblent se manifester. Pour le sentiment positif après une phase de déclin l'optimisme semble revenir. Le sentiment négatif s'accentue avec le temps même s'il semble se stabiliser depuis le jour 15, voir même légèrement se réduire en intensité. Le bilan est un écart croissant. Il peut rendre compte d'une atmosphère plombée dans laquelle l'accroissement du sentiment positif, n'est peut être que le fruit de l'humour et de la dérision qui règnent en maîtres dans les temps de stress.
+
+Dans cette représentation, les mesures sont les écarts de score par rapport à la première observation. On met en valeur les trajectoires plus que les niveaux.
+
+```{r score3}
+
+sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopos+Pos_lsdfr , negatif =Neg_lsdfr+émonég+negative,anger+disgust+fear+sadness ) %>% 
+  group_by(Jour) %>% 
+  mutate(n=1) %>%
+  summarise(positif=mean(positif,na.rm=TRUE),negatif=mean(negatif, na.rm=TRUE), n=sum(n))
+
+foo<-sentevol %>% ungroup %>%select(Jour, positif,negatif) %>%mutate (positif=positif-first(positif), negatif=negatif-first(negatif))
+#expression=positive+negative, polarity=positive-negative
+library(reshape2)
+foo<-melt(foo, id=c("Jour")) %>%filter(Jour<23)
+ggplot(foo, aes(x=Jour,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal() + #stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Ecart de Valence relative à J1 : moyennes Journalières",
+    caption = "\nSource: Data collected by #LaboduConfinement from Twitter's REST API via rtweet"
+  )+geom_smooth(method="loess", aes(color=variable))+ylim(-0.3,+0.8)
+```
+
+### Expressivité et polarité
+
+Et pour finir, l'indicateur alternatif qui s'exprime en expressivité et en polarité. Le Jour 3 et le jour 20 ont été particulièrement expressifs. Ces pics correspondent dans un cas à un accroissement de la polarité positive, dans l'autre à une stabilisation voire une diminution. 
+
+C'est une grille d'analyse à approfondir. Le sentiment n'est pas tant un jugement durable (une attitude) que la réaction émotionnelle à l'événement et à son commentantaire. Son intensité est peutêtre plus importante que sa polarité, sauf si elle varier considérablement au moemnt où l'expressivité et dans sa pleine acuité. Quand l'evenement est fort on répond autant en se roulant de rire, en branchissant des break events, qu'en pleurant des larmes de rivières, ce que nous apprend l'analyse des émos.
+
+```{r score, fig.width=7}
+
+ggplot(foo, aes(x=Jour,y=value,group=1))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal() + #stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution de l'expressivité et de la polarité du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Intensité par Jour",
+    caption = "\nSource: Data collected by #LaboduConfinement \n from Twitter's REST API via rtweet")+
+  facet_wrap(vars(variable),ncol=1, scales="free")
+
+
+```
+
+## Références :

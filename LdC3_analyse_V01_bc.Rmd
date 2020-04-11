@@ -6,6 +6,7 @@ output:
   html_document: default
   word_document: default
 ---
+![Italie](vespamasque.jpg)
 
 
 Ce script est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
@@ -66,7 +67,7 @@ IMPORTANT : on exclue les retweets, mais il peut être utile de regarder aussi a
 
 ```{r capt, include=TRUE, echo=FALSE}
 
-df_nrc<- readRDS(file = "df_nrcliwc17.rds") 
+df_nrc<- readRDS(file = "df_nrcliwc.rds") 
 df_nrc<-df_nrc %>% filter (is_retweet==FALSE) #on exclue les retweets
 
 df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour

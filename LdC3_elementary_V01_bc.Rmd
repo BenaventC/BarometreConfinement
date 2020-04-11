@@ -1,5 +1,6 @@
 ---
-title: "Barometre du confinement : les acteurs et leur production"
+title: "Laboratoire du confinement "
+subtitle:": les acteurs et leur production"
 author: "CB"
 date: "31 mars 2020"
 output:
@@ -10,7 +11,7 @@ output:
 
 Une collection de tweets mais quelle population? Quels acteurs?
 
-Des analyse descriptive pour mieux cerner la population qui produit le flux des tweets collectés. 
+Des analyses descriptives pour mieux cerner la population qui produit le flux des tweets collectés. 
 
 # Les outils de l'analyse
 
@@ -28,10 +29,19 @@ library(scales) #pour les échelles de temps et de date
 library(syuzhet)     # ncr      
 library(tm)
 library(quanteda) #with quanteda
+library(ineq)
+library(gglorenz)
 
 ```
 
+
+Quelques recodages de date pour obetnir les unité J+1, J+2...
+
+Et une représentation de la distribution temporelle des données.
+
+
 ```{r Senti03}
+df<- readRDS(file = "df_nrcliwc.rds") 
 
 #construire des dates jour/heures
 
@@ -44,12 +54,10 @@ df$year<-2020 # heure
 df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
 
 ggplot(df,aes(x=Jour))+
-  geom_bar(fill="gold4")+ 
+  geom_bar(aes(fill=(is_retweet)))+ 
   theme_minimal()+ 
   labs(title="# de tweets par jour")+
   facet_wrap(vars(is_retweet),ncol=1,scales="free")
-
-
 
 #library(ggridges)
 
@@ -60,13 +68,14 @@ ggplot(foo,aes(x=hour, y=Jour))+theme_minimal() +
   geom_density_ridges(scale=4, fill="pink") +
   labs(title = 'distribution du sentiment')
 
-
-# par jour
-
+# par mois
 
 ggplot(df,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
 
-ggplot(df,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()+facet_wrap(vars(is_retweet),ncol=1,scales="free")
+ggplot(df,aes(x=hour))+
+  geom_bar(fill="firebrick")+
+  theme_minimal()+
+  facet_wrap(vars(is_retweet),ncol=1,scales="free")
 
 ```
 
@@ -116,37 +125,67 @@ g6
 
 ```
 
-```{r capt4, include=TRUE, echo=FALSE}
 
-df$month<-as.numeric(format(df$created_at, "%m")) # mois
-ggplot(df,aes(x=month))+geom_bar(fill="firebrick")+theme_minimal()
-df$hour<-as.numeric(format(df$created_at, "%H")) # heure
-ggplot(df,aes(x=hour))+geom_bar(fill="firebrick")+theme_minimal()
+## L'analyse des contributeurs 
 
-df$year<-2020 # heure
-df$day2<-as.factor(df$day)
+Analyse en terme de concentration
 
-```
+jour du premier post, jours du dernier
 
+regarder les pondérations en terme de followers, leur exposition primaire
 
-## L' évolution quantitative des tweets
-
-On retrace ici la production quotidiennes des tweets, rt quotes et reply. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html).
-
-On observe un effet d'usure, un rebond le dimanche, et un cycle quotidien. Aux premiers jours il semble qu'on postait plus le matin que le soir, après quelques jours la tendance s'est renversée.
+tour en terme de courbe de concentration
 
 ```{r desc1}
-## plot time series of tweets
-ts_plot(foo, "1 hours", color="darkblue") +
-  ggplot2::theme_minimal() +
-  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
-  ggplot2::labs(
-    x = NULL, y = NULL,
-    title = "Fréquence des posts twitters sur #confinementjour",
-    subtitle = "Nombre de tweets par heure",
-    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
-  )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+dc <-df %>% group_by(screen_name) %>% 
+  mutate (n=1) %>% 
+  summarise(n=sum(n), 
+            favorite_count=sum(favorite_count),
+            retweet_count=sum(retweet_count))
 
 
 ```
 
+```{r quanti02, include=TRUE}
+#on calcule le nombre d'avis par logement
+comment_W$Hotel<-as.factor(comment_W$Hotel)
+Avis<-comment_W %>% mutate(n=1) %>% group_by(Hotel) %>% summarise(nb_avis = sum(n))
+mean<-round(mean(Avis$nb_avis),1)
+median<-median(Avis$nb_avis)
+max<- max(Avis$nb_avis)
+g05a<-ggplot(Avis, aes(x=nb_avis))+
+  geom_histogram(binwidth=20,fill="coral3")+
+  theme_minimal()+
+  xlim(0,2500)+  
+  ylim(0,25)+
+  annotate("text", x=1000, y=20, size=3,label= paste0("moyenne=",mean,"- médiane=", median,"- max=",max))+labs(x = "nombre d'avis", y = "Fréquences (nb d'hôtels)", title = "Distribution du nombre d'avis par hôtel", caption = "Laboratoire du confinement")
+
+#on analyse la concentration
+#library(ineq)
+#library(gglorenz)
+gini<-round(ineq(Avis$nb_avis,type = c("Gini")),2)
+
+g05b<-Avis %>%
+    ggplot(aes(nb_avis)) +
+    stat_lorenz(desc = TRUE,size=1.2,color="darkred") +
+    coord_fixed() +
+    geom_abline(linetype = "dashed") +
+    theme_minimal() +labs(x = "Part cumulée des hôtels",
+         y = "Part cumulée des avis",
+         title = "Concentration des avis",
+         caption = "") +
+  annotate("text", x=.35, y=.6, size=3,label= paste0("indice de Gini=",gini))
+
+grid.arrange(g05a,g05b,ncol=2)
+```
+
+
+La question principale : peut-on identifier des groupes de twittos :
+  * qui anime et répète chaque jour
+  * qui trôle ou oeuvre en passager clandestion
+  * qui produisent de manière occasionnelle et épidermique
+  * qui n'ont produit qu'une fois 
+Construire une telle segmentation permettrait d'engager une opération de comparaison systématique sur les profils. C'est l'objectif .
+
+#Références
+  

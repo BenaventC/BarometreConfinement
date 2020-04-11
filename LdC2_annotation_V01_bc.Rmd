@@ -1,5 +1,6 @@
 ---
-title: "confinement"
+title: "Laboratoire du Confinement"
+subtitle: "Annotations du sentiment"
 author: "CB"
 date: "12 mars 2020"
 output: html_document
@@ -34,7 +35,7 @@ library(ggridges)
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_22.rds") 
+df<- readRDS(file = "df_24.rds") 
 
 ```
 
@@ -75,14 +76,17 @@ On en profite pour faire une analyse de fiabilité
 
 L'unité de temps est l'heure et la journée. 
 
-On se concentrera sur les tweets informatifs : les tweets originaux et les qoutes, on elimine donc les retweets. Ultérieurement il sera intéressant de comparer les deux sous corpus. Le premier reflète la production primaire et originale, de ceux assez engagés pour faire l'effort de produire un contenu. Le second reflète la propagation des idées diffusées dans par le premier et les préférences des utilisateurs moins engagés, les "transmetteurs". Ils ont le pouvoir de propager certains contenu audelà de leur audience immédiates et peuvent ainsi déformer la distribution des contenus.
+On se concentrera sur les tweets informatifs : les tweets originaux et les quotes, on élimine donc les retweets de l'analyse et de l'annotation. 
+
+Ultérieurement, il sera intéressant de comparer les deux sous corpus. Le premier reflète la production primaire et originale, de ceux assez engagés pour faire l'effort de produire un contenu. Le second reflète la propagation des idées diffusées dans par le premier et les préférences des utilisateurs moins engagés, les "transmetteurs". Ils ont le pouvoir de propager certains contenus audelà de leurs audiences immédiates et peuvent ainsi déformer la distribution des contenus, comme l'écho peut filtrer certains sons.
 
 ```{r Senti01, include=FALSE}
 #Un contrôle pour les calculs intermédiaires  en échantillonnant.
 
 df<-df %>% filter(is_retweet==FALSE)
+
 ## plot time series of tweets
-ts_plot(df, "1 hours", color="darkblue") +
+ts_plot(df, "6 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
@@ -97,12 +101,11 @@ ts_plot(df, "1 hours", color="darkblue") +
 
 ## Méthode NRC
 
-### Procédure
 
-On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple.
+On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple. On enrichit le fichier de données df de ces nouvelles annotations
 
 
-```{r Senti01}
+```{r Senti01b}
 #require(syuzhet)            
 #prend bcp de temps 
 #paramétres
@@ -114,6 +117,12 @@ my_text_values_french1<- get_nrc_sentiment(phrase, language="french")
 
 #ajout de la colonne sentiment au tableau de données général:
 sent<-as.data.frame(my_text_values_french1)
+
+library(kableExtra)
+#extrait du fichier
+kable(head(sent,5))
+
+#ajout
 df<-cbind(df,sent)
 
 #on sauvegarde pour réemploi ultérieur
@@ -123,16 +132,13 @@ write_rds(df,"df_nrc.rds")
 Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
 
 
-On examine la distribution par jour et heures de la journée en utilisant une visu ridge inspiré de l'album de new order. 
-https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
-
 ## Methode liwc
 
 le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/compare-dictionaries/) permet d’obtenir d’autres indicateurs du sentiment, même s'il propose son propre calcul de positivité et de negativité qu'on va explité ne serait-ce que pour étblir la convergence avec l'indicateur NRC.
 
 Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. On retrouvera ici les [principales variables](https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir ref
 
-La procédure pour extraire ces notions est fort simple :
+La procédure pour extraire ces notions est fort simple, analogue à la précédente :
 
 ```{r liwc01, fig.height=9}
 # the devtools package needs to be installed for this to work
@@ -142,8 +148,9 @@ library("quanteda.dictionaries")
 dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
                              format = "LIWC")
 test<-liwcalike(df$text,dictionary = dict_liwc_french)
-df<-cbind(df,test)
+kable(head(test,5))
 
+df<-cbind(df,test)
 write_rds(df,"df_nrcliwc.rds")
 
 ```
@@ -152,9 +159,37 @@ Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à not
 
 ## Methode lsd
 
-Lexicoder
+Lexicoder en français est du à @duval_analyse_2016. [voir aussi](https://www.poltext.org/fr/donnees-et-analyses/lexicoder). On utilise la version adaptée pour quanteda.
 
-https://www.poltext.org/fr/donnees-et-analyses/lexicoder
+```{r sent13}
+dictfile <- tempfile()
+download.file("http://dimension.usherbrooke.ca/voute/frlsd.zip", dictfile, mode = "wb")
+unzip(dictfile, exdir = (td <- tempdir()))
+dic_ton <- dictionary(file = paste(td, "frlsd.cat", sep = "/"))
+df_senti<-df$text %>% tokens(what = "word", remove_numbers = TRUE, 
+                              remove_punct=TRUE, remove_symbols = TRUE,
+                              remove_separators = TRUE, remove_twitter = TRUE,
+                              remove_hyphens = FALSE, remove_url = TRUE, 
+                              ngrams = 1L)
+senti<-tokens_lookup(df_senti, dictionary = dic_ton, exclusive = FALSE)
+#head(senti,2)
+#Application du dictionnaire des sentiments: obtient l'occurence des termes positifs et des termes négatifs par commentaire
+analyseSentiments <- dfm(df_senti, dictionary = dic_ton)
+#Transformation en un data.frame avec transformation du nom des variables
+
+dfBaseSpecifique=data.frame(analyseSentiments,nb=ntoken(df_senti), id=rownames(df))
+dfBaseSpecifique<-dfBaseSpecifique %>% rename(Pos_lsdfr=POSITIVE, Neg_lsdfr=NEGATIVE)
+df_lsd<-cbind(df,dfBaseSpecifique)
+
+M<-subset(df_lsd, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
+M <- cor(M)
+library(corrplot)
+corrplot.mixed(M, order="hclust")
+```
+
+
+
+
 
 
 ## Méthodes sur mesure
