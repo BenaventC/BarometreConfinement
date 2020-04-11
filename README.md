@@ -10,7 +10,7 @@ Cette analyse est conduite en 3 mouvements :
         ** analyse baromètrique ( heure et jour)
         ** corrélation des indicateurs
 
-A ce jour -j+18, la base primaire comporte 1.2 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go).
+A ce jour -j+14, la base primaire comporte 1.5 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go). On se concentre sur les 250ko de messages primaires.
 
 L'idée est de tester sur ce corpus des instrument de mesure du sentiment de manière systématique. Dans ce contexte l'objectif de projet est d'évaluer dans quelle mesure, ces outils permettent de capter les variations des émotions de la population au fil des jours et des évènements et de l'actualité. Les différents indicateurs sont-ils convergents? Sont-il fiables et sensibles?
 
