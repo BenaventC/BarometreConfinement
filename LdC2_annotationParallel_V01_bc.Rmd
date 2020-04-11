@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Ce script succède et vient en complément au script `LdC2_annotation_V01_bc.Rmd` qui associe des annotations au tweets à partir de trois méthodes et/ou dictionnaires NCR, LIWC et LSD. 
+Ce script succède et vient en complément au script `LdC2_annotation_V01_bc.Rmd` qui associe des sentiments (annotations) aux tweets à partir de trois méthodes et/ou dictionnaires NCR, LIWC et LSD. 
 
 Les scripts proposés cherchent à accélérer les calculs d'annotation car ceux-là sont les plus lourds (ils durent plusierus heures) et constituent un goulot d'étranglement à ce stade des analyses. 
 
@@ -23,9 +23,9 @@ Deux pistes sont exploitées:
 
 ### La méthode
 
-Sont développées et actualisées des méthodes de calcul BigData présentées par moi en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que j'ai appelée « GRAPPA » (un clin d'œil  à la boisson qui nous a inspiré là-bas). Il s'agit de combiner l'approche MapReduce qui a démocratisé les calculs BigData avec les solutions de calcul parallel disponibles.
+Sont développées et actualisées des méthodes de calcul BigData présentées par moi en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que j'ai appelée GeneRal Approach for Parallel Processing Actions ou « GRAPPA » (un clin d'œil  à la boisson qui nous a inspiré là-bas). Il s'agit de combiner l'approche MapReduce qui a démocratisé les calculs BigData avec les solutions de calcul parallel disponibles sur un ordinateur multicoeur et sur les clusters d'ordinateurs.
 
-### Elements communs aux approches multicore et cluster
+### Elements communs aux deux approches (multicore et cluster)
 
 #### Packages communs
 On mobilise les packages necessaires
@@ -40,7 +40,7 @@ library("quanteda.dictionaries")
 ```
 
 #### READ & UPDATE: données
-Après avoir chargé les données collectées, 
+Après avoir chargé les tweets collectées, on rajoute quelques variables utiles
 
 ```{r common-readupdate, eval=FALSE, include=TRUE}
 df <- readRDS("df.rds")
@@ -54,7 +54,7 @@ df$Jour <- 0
 ```
 
 #### CHUNK SIZE:
-determination de la taille des segments de tweets pour les split en fonction de leur nombre et du nombre de noeuds disponibles.
+determination de la taille des segments de tweets pour les splits en fonction de leur nombre et du nombre de noeuds disponibles.
 
 ```{r common-chunksz, eval=FALSE, include=TRUE}
 ncores = 4 # ou: detectCores()-1 
@@ -64,20 +64,21 @@ fsplit = rep(1:ncores, each=round(ntweets/ncores+.5,0))
 
 
 ### Calcul parallèle sur un ordinateur (implicit or multicore parallelism)
-En répartisant les calculs sur plusieurs coeurs à la fois on arrive a réduire la durée des calculs 2 à 3 fois.
+En répartisant les données segmentées (splitées) et leur calcul sur plusieurs coeurs à la fois on arrive a réduire la durée des calculs 2 à 3 fois.
 
 #### NRC
+Analyse du sentiment simple (negatif, positif), puis celui des émotions (confiance,peur,surprise,tristesse,dégoût,colère,anticipation,joie)
 ##### SPLIT: des données
-on divise  (split ) l’ensemble des tweets  en morceaux (chunks) de taille égale afin de les affecter à chacun des cœurs du processeur de l’ordinateur pour les traiter en parallèle.
+On divise  (split ) l’ensemble des tweets  en morceaux (chunks) de taille égale afin de les affecter à chacun des cœurs du processeur de l’ordinateur pour les traiter en parallèle.
 
 ```{r ordi-split, eval=FALSE, include=TRUE}
-svtexte=split(as.character(df$text),fsplit[1:lenvtxt])
+svtexte=split(as.character(df$text),fsplit[1:ntweets])
 ```
 
 ##### MAP: mappage parallèle de la fonction qui associe des catégories de sentiments NRC au textes 
 
 La fonction mclapply mappe (affecte) l'annotation des sentiments NRC aux segments (chunks) de tweets produisant comme résultat une liste de tableaux qui contiennent les frequences des catégories de sentiments trouvés dans chaque texte. Dans la liste il y a autant de tableaux qu’il y a de cœurs.  
-Comme c'est ici que se concentre les calculs lourds nous y avons ajouté une fonctionalité (system.time) qui calcule leur durée 
+Comme c'est ici que se concentre les calculs lourds nous y avons ajouté une fonctionalité (system.time) qui affiche leur durée 
 
 ```{r ordi-map, eval=FALSE, include=TRUE}
 print(system.time(
@@ -85,22 +86,24 @@ print(system.time(
 ))
 ```
 
-##### REDUCE: regroupe les morceaux qui avaient été affectés à chaque cœur
+##### REDUCE: regroupe les resultats de calcul de chaque cœur
 
-L’étape REDUCE regroupe la liste de tableaux d’annotation en un seul tableau en les empilant un sur l’autre ligne par ligne.
+L’étape REDUCE regroupe les tableaux d’annotation, produites par chaque coeur et qui se trouvent dans une liste, en un seul tableau en les empilant un sur l’autre ligne par ligne.
 
 ```{r ordi-reduce, eval=FALSE, include=TRUE}
 resnrc <- Reduce(rbind, resnrc)
 ```
 
 ##### SAVE:  
-Crée un fichier augmenté de 10 colonnes avec les frequences des categories de sentiments issues du calcul MapReduce précedent
+Augmente le fichier (tableau) de tweets avec les frequences des categories de sentiments issues du calcul MapReduce précedent, en rajoutant 10 colonnes.
 
 ```{r ordi-save, eval=FALSE, include=TRUE}
 df_nrcliwc <- cbind(df,resnrc)
 write_rds(df_nrcliwc,"df_nrcliwc.rds")
 ```
 #### LIWC
+L'analyse de sentiments est complété par trois groupes de variables (de 80 variables) : celles liées aux proches ( ami, famille, humains), celles liée à la physiologie (alimentation, corps,sexualité,santé ) et enfin celle liée à la dimension saptiotemporelle
+
 ```{r ordi-pre2, eval=FALSE, include=TRUE}
 dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
                                format = "LIWC")
@@ -138,7 +141,7 @@ write_rds(df_nrcliwc,"df_nrcliwc.rds")
 
 En répartisant les calculs sur plusieurs ordinateurs (noeuds) sur un cluster on arrive a réduire substantiellement leur durée (jusqu'à des dizaines de fois).
 
-Il s'agit d'un cluster d'ordinateurs ou cluster HPC (High Performance Computing) de type grille de calcul du notre méso-centre de l'unversité. Les calculs sur le Cluster s'effectuent par l'intermédiaire d'un gestionnaire de travaux qui s'occupe de gérer la file d'attente et de lancer les calculs lorsque les ressources demandées sont disponibles.
+Il s'agit du cluster HPC (High Performance Computing) de type grille de calcul du notre méso-centre de l'unversité. Les calculs sur le Cluster s'effectuent par l'intermédiaire d'un gestionnaire de travaux qui s'occupe de gérer la file d'attente et de lancer les calculs lorsque les ressources demandées sont disponibles.
 
 Le gestionnaire de travaux du Cluster est SLURM (Simple Linux Utility for Resource Management).
 
@@ -156,7 +159,7 @@ svtexte=split(as.character(df$text),fsplit[1:ntweets])
 
 ##### MAP: mappage parallèle de la fonction d'affectation des sentiments NRC aux textes 
 
-La fonction "slurm_apply" est un genre d'enveloppe pour "mclapply" du package "parallel", elle dispatche les mêmes opérations sur le cluster d'ordinateurs  
+La fonction "slurm_apply" est un genre d'enveloppe pour "mclapply" du package "parallel", elle dispatche les mêmes opérations sur le cluster d'ordinateurs.  L'option submit = FALSE, au lieu de soumettre le job au cluster, enregistre les données et les scripts dans un répertoire pour que job puisse être soumis manuellement par la commade shell "sbatch submit.sh" à partir de ce répertoir. Ainsi on peut préparer la procédure (job) localement sur un ordinateur personnel et la soumettre ultérieurment au cluster.  
 
 
 ```{r clust-map, eval=FALSE, include=TRUE}
@@ -223,7 +226,7 @@ write_rds(df_nrcliwc,"df_nrcliwc.rds")
 ```
 
 ### Performances obtenue sur les cluster
-Les opérations d'annotation des tweets 1401244 collectés après 20 jours de confinement qui prennent 5 ou 6h peuvent être réduites à 9mn ( sur 32 machines à  2 coeurs), dont 8 min pour l'annotation NRC et moins de 1 min sur LIWC.
+Les opérations d'annotation des tweets 1401244 collectés après 20 jours de confinement qui prennent 5 ou 6h peuvent être réduites à 9mn ( sur 32 machines à  2 coeurs), dont 8 min pour l'annotation NRC et moins de 1 min sur LIWC. 
 
 
 
@@ -359,8 +362,14 @@ Les opérations d'annotation des tweets 1401244 collectés après 20 jours de co
 
 #### Augmentation des perfomance avec le nombre de coeurs (1,2,4,8,16)
 Sur une version antérieure du fichiers de tweets collectées plus de trois fois plus petite avec 401713 tweets les calcul des annotations NRC sur 1 noeud duraient 1h30. En doublant succéssivement le nombre de noueds on constate clairement la réduction du temps de calcul presque linaire avec l'augmentation du nombre de noeuds
+
+
 Noeuds  Temps
+
 2      40
+
 4      19
+
 8      9
+
 16     4
