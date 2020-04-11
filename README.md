@@ -23,10 +23,11 @@ L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr e
 Quelques questions en cours d'exploration:
  * [Introduction](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
  * Construire une [frise chronologique](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) des principaux évenements 
+ * La convergence des [annotateurs : nrc, Lsd fr, Liwc](LdC3_fiability_sentiment_V01_bc)
  * La dimension spatiale via la geolocalisation des tweets
  * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
  * L'analyse des auto-corrélations et corrélations croisées (ts)
- * L'analyse par profils d'utisateurs (induction du genre, fréquence de post, nb de followers)
+ * L'analyse par [profils d'utisateurs]() (induction du genre, fréquence de post, nb de followers)
  * Approche par LDA (Julien Monnot)
  * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
  * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
