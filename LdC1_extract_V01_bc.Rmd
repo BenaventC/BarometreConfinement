@@ -1,20 +1,20 @@
 ---
-title: "confinement"
+title: "Laboratoire du Confinement : extraction des tweets"
 author: "CB"
 date: "12 mars 2020"
 output:
   html_document: default
   word_document: default
 ---
+![kelkin](kelkin.png)
 
+Ce script concerne la première phase de l'analyse, l'extraction des données réalisée avec le package rtweet et l'API rest de twitter dans sa version open.
 
-Ce script est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
-Il concerne la première phase de l'analyse, l'extraction des données réalisée avec le package rtweet et l'API rest de twitter dans sa version open.
 L'extraction est dirigée par le choix d'une série  hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropocènique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de souffle en souffle et se déplace à travers la planête en businessclass.
-Ce hashtag est apparu dans les 16 premiers jours au moins en topic trending, il ne reflète pas l'ensemble des réaction au phénomène, juste une écume, mais assez commune et conventionnelle pour être digne d'intéret. 
 
+Ce hashtag est apparu dans les 26 premiers jours, au moins, en trending topic , il ne reflète pas l'ensemble des réactionq au phénomène du confinement, juste une écume, mais assez commune et conventionnelle pour être digne d'intéret. ( les hashtag comme convent : à développer)
 
-On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
+On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé. La méthode est de recherché le lendemain ( plutôt dans l'après midi) les twet du jour d'avant. On accumule ainsi progressivement les données.
 
 
 
@@ -47,9 +47,11 @@ ATTENTION : il y a un risque de doublon pour J9.( je dois vérifier). Le jour 15
 La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
 
 ```{r capt, include=TRUE, eval=FALSE}
+df_17<-readRDS(file = "df_consoj9.rds")
+
 foo<- df_17 %>% filter(user_id=="1")
 
-x<-c("#ConfinementJour19")
+x<-c("#ConfinementJour26")
 
 
 for (val in x) {
@@ -59,7 +61,7 @@ foo<-rbind(foo,tweets)
 }
 df<-foo
 
-write_rds(tweets,"df_consoj19b.rds")
+write_rds(tweets,"df_consoj26.rds")
 #rattapper le j19
 df1_8<- readRDS(file = "df_conso.rds") 
 df9<-readRDS(file = "df_consoj9.rds")
@@ -79,10 +81,12 @@ df21<-readRDS(file = "df_consoj21.rds")
 df22<-readRDS(file = "df_consoj22.rds")
 df23<-readRDS(file = "df_consoj23.rds")
 df24<-readRDS(file = "df_consoj24.rds")
+df25<-readRDS(file = "df_consoj25.rds")
+df26<-readRDS(file = "df_consoj26.rds")
 
 
-df_24<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
-write_rds(df_24,"df_24.rds")
+df_26<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
+write_rds(df_26,"df_26.rds")
 
 #on crée un échantillon 
 sample<-readRDS(file="df_24.rds")
@@ -91,15 +95,15 @@ write_rds(sample,"df.rds")
 
 ```
 
-# L' évolution quantitative des tweets
+# L' évolution quantitative des tweets collectés
 
 On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
 
 ```{r desc1}
-df_24<-readRDS(file = "df_24.rds")
+df_26<-readRDS(file = "df_26.rds")
 
 ## plot time series of tweets
-ts_plot(df_24, "3 hours", color="darkblue") +
+ts_plot(df_26, "3 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(

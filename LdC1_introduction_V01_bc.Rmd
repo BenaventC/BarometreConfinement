@@ -17,11 +17,21 @@ Ses conséquences sont sanitaires, sociales, politiques et économiques. La mani
 
 Un cadre d'analyse est fourni par les spécialistes d'épidémiologie, de l'humanitaire, des organisations internationales et de la gestion des risque qui se condense dans l'expression de management du désastre.([disaster management](https://www.ifrc.org/en/what-we-do/disaster-management/about-disaster-management/)). Si la catastrophe désigne le phénomène qui frappe (guerre, tsunami, épidémie), le désastre en désigne les conséquences, l'ebranlement ou l'effondrement des systèmes matériels, économique sociaux mais aussi moraux, tout autant que les comportement qui en atténue les conséquences, et permet le rebond des communautés nécessaires dans l'horizon de la reconstruction.
 
-Cette littérature met en avant deux idées. 
+Ses traits caractéristiques sont :
+ * Soudaineté
+ * imprédictabilité
+ * IncontrollabilitéSudden onset,
+ * L'instensité des destructions
+ * Les pertes humaines et la souffrance
+ * L'atteinte aux capacités de réaction de la communauté affectée.
 
- * la première est que la réponse des populations au désastre résulte de leurs émotions, de leur capacités et de leurs intérêts et qu'elle se traduit par le degré de participation aux opérations d'atténuation, par des disposition morale de rebond et de résilience, et la force du sentiment communautaire @noji_disasters_2005 . Voilà qui décrit précisement la situation actuelle : dans quelle mesure les populations participent à la construction de cette barrière virale batie sur l'idée de distance sociale ? Dans quelle mesure poursuivent-elles leurs activités en dépit des contraintes radicales du confinement et en particulier celle de 'lapprovisionnement ? Dans quelle mesure la communauté se soude-et-elle, notamment dans le rituel de l'applaudissement des héros ?
+Cette littérature met en avant deux idées @nojavan_conceptual_2018. 
+
+ * la première est que la réponse des populations au désastre résulte de leurs émotions, de leur capacités et de leurs intérêts et qu'elle se traduit par le degré de participation aux opérations d'atténuation, par des disposition morale de rebond et de résilience, et la force du sentiment communautaire @noji_disasters_2005 . Voilà qui décrit précisement la situation actuelle : dans quelle mesure les populations participent à la construction de cette barrière virale batie sur l'idée de distance sociale ? Dans quelle mesure poursuivent-elles leurs activités en dépit des contraintes radicales du confinement et en particulier celles de l'approvisionnement ? Dans quelle mesure la communauté se soude-et-elle, notamment dans le rituel de l'applaudissement des héros ?
  
- * la seconde est celle d'un cycle émotionnel qui après la stupeur encourage l'héroisme, auxquel la désillusion succède, jusqu'à retrouver un état apaisé qui correspond à une socité stabilisée et confiante dans son futur (autrement dit sure des évolutions qu'elle va subir, et en moyenne confiante dans ce que cette évolution va améliorer leur position).
+ * la seconde est celle d'un cycle émotionnel qui après la stupeur encourage l'héroisme, auxquel la désillusion succède, jusqu'à retrouver un état apaisé qui correspond à une socité stabilisée et confiante dans son futur (autrement dit sure des évolutions qu'elle va subir, et en moyenne confiante dans ce que cette évolution va améliorer leur position). C'est celle qui est donnée par la perspective de la santé mentale @math_disaster_2015
+
+![ @math_disaster_2015](IndianJPsycholMed_2015_37.jpg)
  
 Nous sommes dans ce désastre et l'expérience vécue par tous est celle du confinement, même si pour chacun elles se traduit par des contraintes fort distinctes : quand certains se sont réfugié dans leur résidence secondaire, d'autres sont cloués dans de petits appartements. Une recommandation devenue obligation à rester chez soi, un dispositif réglementaire qui contrôle, nudge et sanctionne, une privation, espérons temporaire, de liberté de déplacement. Une vie sociale limitée au foyer et aux moyens de communiquer qui se sont multipliés. Aux whatsapps, snpa, messenger, s'ajoutent zoom ou teams . 
  
@@ -35,9 +45,12 @@ Nous nous intéresserons moins au virus et à la maladie, moins au choc économi
 
 On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
 
+Les liens vers les différentes facettes de l'étude de ce corpus sont donnés ci-dessous.
 
+  * [Introduction au projet](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
   * [Analyse descriptive]()
-  * [Evolution des indicateurs]()
-  * [Evolution des indicateurs]()
-  * [Analyse des emos]()
+  * [Evolution des indicateurs de sentiment](https://benaventc.github.io/BarometreConfinement/LdC3_analyse_V01_bc.html)
+  * Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html)
+  * [Analyse des emos](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)
  
+ ## Références

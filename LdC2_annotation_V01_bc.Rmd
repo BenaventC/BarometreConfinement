@@ -35,7 +35,7 @@ library(ggridges)
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_24.rds") 
+df<- readRDS(file = "df_26.rds") 
 
 ```
 
