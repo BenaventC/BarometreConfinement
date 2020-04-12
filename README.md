@@ -4,11 +4,10 @@
 Ce repo contient les éléments d'une analyse en continu d'un fil de tweet défini par l'usage du hashtag #confinementJour1 à #confinementJour_n.
 
 Cette analyse est conduite en 3 mouvements :
-    * 1) extraction quotidienne des données dans API rest de twitter (et filtrage pour analyses spécifiques, ie uniquement les RT).
-    * 2) annotation systématique avec les différents outils et constitution du fichier de travail.
-    * 3) les analyses statistiques menées sur le fichier de travail
-        ** analyse baromètrique ( heure et jour)
-        ** corrélation des indicateurs
+
+ * 1) extraction quotidienne des données dans API rest de twitter (et filtrage pour analyses spécifiques, ie uniquement les RT).
+ * 2) annotation systématique avec les différents outils et constitution du fichier de travail.
+ * 3) les analyses statistiques menées sur le fichier de travail : analyse baromètrique ( heure et jour), corrélation des indicateurs, segmentation des twittos, 
 
 A ce jour -j+24, la base primaire comporte 1.5 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go). On se concentre sur les 250ko de messages primaires.
 
