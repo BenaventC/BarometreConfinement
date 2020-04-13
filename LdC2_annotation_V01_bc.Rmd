@@ -2,10 +2,10 @@
 title: "Laboratoire du Confinement"
 subtitle: "Annotations du sentiment"
 author: "CB"
-date: "12 mars 2020"
+date: "12 avril 2020"
 output: html_document
 ---
-
+![sideco119-merci](sideco119-merci.jpg)
 
 Ce script succède au script `DfC_extract_V01_bc` destiné à organisation la collecte et la compilation des données brutes de twitter, il a pour objet la systématisation des opération d'annotations.  
 
@@ -105,7 +105,7 @@ ts_plot(df, "6 hours", color="darkblue") +
 On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple. On enrichit le fichier de données df de ces nouvelles annotations
 
 
-```{r Senti01b}
+```{r Senti01b, eval = FALSE}
 #require(syuzhet)            
 #prend bcp de temps 
 #paramétres
@@ -140,7 +140,7 @@ Une partie des 80 indicateurs proposés est relatif à des dimensions topicales 
 
 La procédure pour extraire ces notions est fort simple, analogue à la précédente :
 
-```{r liwc01, fig.height=9}
+```{r liwc01, eval = FALSE}
 # the devtools package needs to be installed for this to work
 devtools::install_github("kbenoit/quanteda.dictionaries")
 
@@ -157,11 +157,11 @@ write_rds(df,"df_nrcliwc.rds")
 
 Maintenant on analyse les données, plus de 80 colonnes se sont ajoutées à notre fichier.
 
-## Methode lsd
+## Méthode lsd
 
 Lexicoder en français est du à @duval_analyse_2016. [voir aussi](https://www.poltext.org/fr/donnees-et-analyses/lexicoder). On utilise la version adaptée pour quanteda.
 
-```{r sent13}
+```{r sent13,  eval = FALSE}
 dictfile <- tempfile()
 download.file("http://dimension.usherbrooke.ca/voute/frlsd.zip", dictfile, mode = "wb")
 unzip(dictfile, exdir = (td <- tempdir()))
@@ -199,7 +199,7 @@ Si la notion de sentiment se rapporte à l'idée de valence (+/-) et que les ins
 Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
 
 
-```{r Senti03, include=TRUE}
+```{r Senti03, include=TRUE,eval = FALSE}
 my_text <- df$text
 method <- "custom"
 custom_lexicon <- data.frame(word=c("course", "shopping", "queue", "masque","un mètre",

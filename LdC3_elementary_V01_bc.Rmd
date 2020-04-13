@@ -14,19 +14,19 @@ La collection de tweets constituée ( nous en sommes à 26 jours) est supposée 
 La question principale : peut-on identifier des groupes de twittos qui sur le fil #confinementjour:
 
   * animent et répètent chaque jour la publication de posts
-  * trôllent où oeuvre en passagers clandestins inondant le fil de leur production
+  * trôllent où oeuvrent en passagers clandestins inondant le fil de leur production
   * produisent de manière occasionnelle et épidermique
   * n'ont produit qu'une unique fois 
   
-Construire une telle segmentation permettrait d'engager une opération de comparaison systématique sur les profils. C'est l'objectif de la note d'étude.
+Construire une telle segmentation permettrait d'engager une opération de comparaison systématique sur les profils. C'est l'objectif de cette note d'étude.
 
-Des analyses descriptives pour mieux cerner la population qui produit le flux des tweets collectés. 
+## Les outils de l'analyse
 
-# Les outils de l'analyse
+A cette fin on utilise les packages suivants.
 
-A cette fin on utilise les packages suivant.
+Quelques recodages de date pour obtenir les unités J+1, J+2...
 
-```{r setup}
+```{r setup, message=FALSE,warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
 library(tidyverse) #l'environnement de base : données et visus
 library(rtweet) #extraction twitter
@@ -35,25 +35,25 @@ library(scales) #pour les échelles de temps et de date
 library(ineq)
 library(gglorenz)
 library(ggridges)
-```
 
 
-Quelques recodages de date pour obetnir les unité J+1, J+2...
-Et une représentation de la distribution temporelle des données.
-
-
-```{r Senti03}
-df<- readRDS(file = "df_nrcliwc.rds") 
+df<- readRDS(file = "df_lsd.rds") 
 
 #construire des dates jour/heures
-
 df$day<-as.numeric(format(df$created_at, "%d")) # jour
 df$month<-as.numeric(format(df$created_at, "%m")) # mois
 df$hour<-as.numeric(format(df$created_at, "%H")) # heure
 df$year<-2020 # heure
 
-
 df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+
+```
+
+
+Et voici une représentation de la distribution journalière de la production des données, ainsi que sa distribution horaire, jour par jour. On observe des pics matinaux et le soir, mais avec une balance différente selon les jours.Parfois pls le midi, parfois plus le soir. L'enjeu bien sur, va être d'idenfier  ceux qui produisent les tweets.
+
+
+```{r Senti03}
 
 g001<-ggplot(df,aes(x=Jour))+
   geom_bar(aes(fill=(is_retweet)))+ 
@@ -77,23 +77,21 @@ grid.arrange(g001, g002, ncol=2)
 
 ## La popularité des tweets
 
-On ne garderque des contenus avec du texte original. On passe de 1,3 millions de tweets et RT à un peu plus de 250 000 tweets. Donc un rapport de 1 tweet pour 5 retweets. 
+Avant de nous intéresser à la population des individus, examinons encore les caractéristiques du flux et de la population des tweets et notamment à leur popularité.
 
+On ne garde que des contenus avec du texte original. On passe de 1,3 millions de tweets et RT à un peu plus de 250 000 tweets. Donc un rapport de 1 tweet pour 5 retweets. Parmis les tweets primaires, 25000 d'entre eux sont des citations (quotes), donc en gros 10%.
 
-Mais d'abord une approche descriptive des tweets primaires. 25000 d'entre eux sont des quotes, 10%.
+Examinons la distribution des indicateurs d'engagement qui décrit la popularité des contenus et peut être appréciée par le nombre de retweetx dont ils ont fait l'objet, et le nombre de fois où ils ont été cliqués comme favori.
 
-Examinons la distribution des indicateurs d'engagement, on selectionne les tweets  les tweet primaires, ceux qui sont la racine d'une propagation. :
-
-La popularité de ces contenus peut âtre appréciée par le nombre de retwteet dont il ont fait l'objet, et le nombre de fois où ils ont été cliqué comme favori.
-L'inégalité est de mise : moins de 5 tweets ont été relayé et aimé mille fois et plus. Ceux qui l'ont été une centaine de fois, sont dans la centaine. La représentation logarithmique efface la grande majorité de ceux qui n'ont j'ai été appréciés.  
+L'inégalité est de mise : moins de 5 tweets ont été relayés et aimés plus de mille fois. Ceux qui l'ont été dans l'ordre de la centaine de fois, sont une  centaine d'individus. La représentation logarithmique efface la grande majorité de ceux qui n'ont jamais été apprécié ( 0 tweets ou retweet).  
 
 ```{r tw01, }
 library(scales)
 foo<-df %>% filter (is_quote==TRUE & is_retweet==FALSE)
 
-g1<-ggplot(foo,aes(x=favorite_count+1))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()+ scale_y_log10()+labs(title="Popularité des tweets", subtitle = "Favoris", x="nombre de likes")     
+g1<-ggplot(foo,aes(x=favorite_count+0.1))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10()+ scale_y_log10()+labs(title="Popularité des tweets", subtitle = "Favoris", x="nombre de likes")     
 
-g2<-ggplot(foo,aes(x=retweet_count))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10() +scale_y_log10()+labs(title="", subtitle = "Retweet", x="nombre de retwteets")     
+g2<-ggplot(foo,aes(x=retweet_count+0.1))+geom_histogram(fill="firebrick")+theme_minimal()+ scale_x_log10() +scale_y_log10()+labs(title="", subtitle = "Retweet", x="nombre de retwteets")     
 
 grid.arrange(g1,g2,ncol=2)
 ```
@@ -102,17 +100,13 @@ grid.arrange(g1,g2,ncol=2)
 
 ## La concentration de la production 
 
-Analyse en terme de concentration
-
-jour du premier post, jours du dernier
-
-regarder les pondérations en terme de followers, leur exposition primaire
-
-tour en terme de courbe de concentration
+Une analyse en terme de concentration est indispensable.
 
 Après agrégation sur le screen_name, le nom d'utilisateur, on peut representer la distribution des individus qui postent des messages en fonction du nombre des messages qu'ils ont postés. Globalement le volume des 250 000 tweets sont générés par 75407 comptes distincts. Soit à peu prêt un peu plus de 3 message par individu. Mais ces deux chiffres masquent une extrême hétérogénéité. 
 
-Si près de 50.000, les deux tiers n'ont posté qu'une fois, des milliers ont produits jusqu'à des dizaines de post, et une infime partie des centaines. La courbe de concentration est claire s: un tiers des twittos multiples, produisent les deux tiers du contenu.et les premiers 5% en produisent la moitié. 
+Si près de 50.000, les deux tiers n'ont posté qu'une fois, des milliers ont produits jusqu'à des dizaines de post, et une infime partie des centaines. La courbe de concentration est claire : un tiers des twittos qui postent de multiples fois , produisent les deux tiers du contenu, et les premiers 5% en produisent la moitié. 
+
+L'indice de gini est de .
 
 ```{r quanti02, include=TRUE}
 #on calcule le nombre d'dc par logement
@@ -154,7 +148,7 @@ On segmente sur la base du nombre de posts
  * 7 à 25 tweets  : sans doute fidèles au fil
  *  audelà la suractivité doit être analysée plus finement ( bots, troll, activistes...)
  
-En terme de capacité de production, ce sont les fidèles de 7 à 25 messages qui représentent la moitié de la production. La production des spammeur est importante mais ne représente que 15% du volume. 
+En terme de capacité de production, les fidèles qui émettent de 7 à 25 messages représentent la moitié de la production. La production des spammeur est importante mais ne représente que 15% du volume. 
 
 ```{r quanti03}
 col =c("deepskyblue4","chartreuse3","gold2","firebrick2")
@@ -166,7 +160,7 @@ g10<-ggplot(dc,aes(x=Twittos,y = ..count.. / sum(..count..),fill=Twittos))+
   geom_bar(position = "stack")+theme_minimal()+
   coord_flip()+
   scale_fill_manual(values =col)+ 
-  theme(legend.position = "none")+  labs(title="Part des tweetos",x="proportion")  
+  theme(legend.position = "none")+  labs(title="Part des tweetos (n=75 407)",x="twittos",y="proportion")  
 
 
 #dc$Twittos<- as.factor(dc$Twittos)
@@ -178,7 +172,7 @@ df_user <-df %>%left_join(dc,by="screen_name")%>%mutate(n_tweets=1)
 g11<-ggplot(df_user,aes(x=Twittos, y = ..count.. / sum(..count..),fill=Twittos))  +
   geom_bar() +theme_minimal()+coord_flip()+
   scale_fill_manual(values =col) + theme(legend.position = "none")+
-  labs(title="Part des tweets",x="proportion")  
+  labs(title="Part des tweets ( n= 273 343)", y="proportion")  
 grid.arrange(g10,g11,ncol=2)                                 
 ```
 
@@ -197,8 +191,17 @@ df_user <-df %>%left_join(dc,by="screen_name")%>%mutate(n_tweets=1)
 foo<-df_user %>%group_by(Twittos)%>% summarise(positive=mean(positive,na.rm=TRUE),negative=mean(negative,na.rm=TRUE))
 library(reshape2)
 foo<-melt(foo)
-g12<-ggplot(foo,aes(x=Twittos,y=value, group=variable))  +geom_line(aes(color=variable), size=2) +theme_minimal()+coord_flip()+scale_color_manual(values =col_sent)     
+g12<-ggplot(foo,aes(x=Twittos,y=value, group=variable))  +geom_line(aes(color=variable), size=2) +theme_minimal()+coord_flip()+scale_color_manual(values =col_sent) +labs(title="Comparaison des profils de twittos", subtitle = "par les sentiments", y="Densité")          
 g12
+df_user$Jour<-as.factor(df_user$Jour)
+anova<-lm(negative~Jour+Twittos, data=df_user)
+summary(anova)
+anova(anova)
+library(ggeffects)
+mydf<-ggpredict(anova, terms = "Twittos")
+ggplot(mydf, aes(x, predicted, group=1)) +
+  geom_line() +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = .1)+theme_minimal()
 
 ```
 
@@ -240,7 +243,9 @@ g12
 
 Le Licw propose un certain nombre d'indicateurs topicaux. En voici le résultat pour un certain nombre d'entre eux pertinents au regard de la question du confinement : le corps, la santé, les proches.
 
-Encore une fois des différences systématiques sont observées, et dans le sens de la dramatisation. Les superposteurs sont des flippés!
+Encore une fois, des différences systématiques sont observées, qui vont dans le sens de la dramatisation. La tendance générale est que ces thématiques sont évoquées moins fréquemment à mesure que l'on poste souvent et va dans le sens de l'impersonnel. Plus on s'expose et moins on parle de soit, mais plutôt de sujet tiers. Quant aux  Les superposteurs il se distingue par une thématique centrée sur la santé. S'agit-il de contenus alarmistes ou inquétant dont ils se feraient une spécialité?
+
+sont des "flippés"! Au regard des "fidèles", ils postent du contenu moins positif mais du contenu plus positif. 
 
 
 ```{r quanti07}
@@ -258,9 +263,14 @@ g12
 
 # Conclusion
 
-* examiner le rôle des superposteurs : des bots ? des spammeurs ? des trolls ?
-* affiner l'expérience de post et le style.
-* Un developpement serait de reconstituter les chaines de tweets.
+La production de flux n'est pas l'agrégation de productions individuelles similiaires, elle dépend de groupes d'individus qui se distinguent par la fréquence de leur post et très probablement par les motifs de leur activité : des réactions spontanées et ponctuelles, un engagement plus net qui conduit à récidiver pendants quelques twts ou une conversation, un engagement plus soutenu et une sorte de fidélité aux #. Une determination dont il faut vérifier la motivation ( bot, troll, pathologe...) qui conduit à une production effrenée. 
+
+Des questions se posent et doivent être résolues:
+
+ * Examiner le rôle des superposteurs : des bots ? des spammeurs ? des trolls ?
+ * Affiner la relation entre l'expérience et le style.
+ * Un developpement serait de reconstituer les chaines de tweets.
+ * Se poser la question de l'élimination des superposteurs des analyses de contenu.
 
 
 #Références

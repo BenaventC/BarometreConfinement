@@ -67,16 +67,15 @@ IMPORTANT : on exclue les retweets, mais il peut être utile de regarder aussi a
 
 ```{r capt, include=TRUE, echo=FALSE}
 
-df_nrc<- readRDS(file = "df_nrcliwc.rds") 
+df_nrc<-readRDS(file = "df_lsd.rds") 
 df_nrc<-df_nrc %>% filter (is_retweet==FALSE) #on exclue les retweets
 
 df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
-ggplot(df_nrc,aes(x=day))+geom_bar()+theme_minimal()
+#ggplot(df_nrc,aes(x=day))+geom_bar()+theme_minimal()
 
 df_nrc$month<-as.numeric(format(df_nrc$created_at, "%m")) # mois
-ggplot(df_nrc,aes(x=month))+geom_bar()+theme_minimal()
 df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
-ggplot(df_nrc,aes(x=hour))+geom_bar()+theme_minimal()
+#ggplot(df_nrc,aes(x=hour))+geom_bar()+theme_minimal()
 
 df_nrc$year<-2020 # heure
 df_nrc$day2<-as.factor(df_nrc$day)
@@ -175,7 +174,7 @@ ggplot(df_nrc,aes(x=positive, y=negative))+geom_point(position="jitter")+theme_m
 On represente ici l'évolution des scores de positivité et de négativité, ainsi que leur différence qui donne le sentiment moyen si on pense que les points négatifs éffacent les points positifs. On garde en tête l'idée de ce carré magique que le négatif n'est pas que l'antonyme du positif. 
 
 
-```{r Senti04, fig.width=7, fig.height=7}
+```{r Senti04}
 
 sentevol<-df_nrc %>% group_by(month,day,hour) %>% mutate(n=1) %>%summarise(positive=mean(positive, na.rm=TRUE),negative=mean(negative, na.rm=TRUE), n=sum(n))
 sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$hour,":00:00")
@@ -188,7 +187,7 @@ foo<-melt(foo, id=c("date2"))
 ggplot(foo, aes(x=date2,y=value,group=variable))+
   geom_line(size=1,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
-  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "gam")+
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
   labs(x = NULL, y = NULL,
     title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
     subtitle = "Valence par heure",
@@ -219,7 +218,7 @@ foo<-melt(foo, id=c("Jour")) %>%filter(Jour<23)
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
-  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "gam")+
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
   labs(x = NULL, y = NULL,
     title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
     subtitle = "Valence par heure",
@@ -228,10 +227,10 @@ ggplot(foo, aes(x=Jour,y=value,group=variable))+
 
 ```
 
-un peu d'analyse des auto-corrélations et des correlations croisées ou comment analyser les relation de la peine et du bonheur. IL nous faut deux grilles théoriques.
+un peu d'analyse des auto-corrélations et des corrélations croisées ou comment analyser les relations de la peine et du bonheur. IL nous faut deux grilles théoriques.
 
- * grille 1 : plus on est heureux moins on est négatif : une logique de balance ou de compensation qui se justifie par une logqique d'effort, pour un niveau d'éffort donné on reparti sont expression entre l'affirmation de l'espoir et la distillation de rancoeur.
- * grille 2 : plus on est heureux plus on est négatif ( moins on est heureux et moins on se plaint) : une logique d'expression ou de verbalisation qui oppose le silence à la protestation pour reprendre les catégories de hisrchman. 
+ * grille 1 : plus on est heureux moins on est négatif : une logique de balance ou de compensation qui se justifie par une logique d'effort, pour un niveau d'éffort donné on reparti sont expression entre l'affirmation de l'espoir et la distillation de rancoeur.
+ * grille 2 : plus on est heureux plus on est négatif (moins on est heureux et moins on se plaint) : une logique d'expression ou de verbalisation qui oppose le silence à la protestation pour reprendre les catégories de Hisrchman. Ce qui prosteste ne sont pas forcement ceux qui souffre le plus.
 
 Pour des idées de code :
 
@@ -419,7 +418,7 @@ foo3<-cbind(date,foo3)
 ggplot(foo3, aes(x=Jour,y=tot))+
   geom_line(stat="identity",size=1,show.legend = TRUE,color="gold2")+
   theme_minimal()+theme(axis.text.x = element_text(size=11, angle=45))+
-  labs(title="Intensité des émotions #confinementjour", subtitle="par heure", y="Somme des émotions",x=NULL)+  geom_smooth(method="gam", color="orange3")
+  labs(title="Intensité des émotions #confinementjour", subtitle="par heure", y="Somme des émotions",x=NULL)+  geom_smooth(method="loess", color="orange3")
 
 ```
 
@@ -658,19 +657,38 @@ print(fit, digits=2, cutoff=.3, sort=TRUE)
 load <- fit$loadings[,1:2]
 plot(load,type="n") # set up plot
 text(load,labels=names(M1),cex=.7) # add variable names
+```
 
+
+```{r liwc3b}
+
+Jour2 <- c(2,8,20)
+for (val in Jour2) {
+  M1<-df_nrc %>% filter (Jour ==val) %>% select(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive)
+  M2<-df_nrc %>% filter (Jour ==val) %>% select( alimentation,sexualité, santé,corps,ami, famille, humain)
+  cor3<-cor(x=M1,y=M2)
+  cor3 <- melt(cor3)
+  g<-ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+ labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white",midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
+   name="Pearson\nCorrelation")
+  g
+
+}
+val<-20
+M1<-df_nrc %>% filter (Jour ==val) %>% select(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive)
+M2<-df_nrc %>% filter (Jour ==val) %>% select( alimentation,sexualité, santé,corps,ami, famille, humain)
 cor3<-cor(x=M1,y=M2)
 cor3 <- melt(cor3)
-
-library(ggplot2)
-ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile()+ labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
- scale_fill_gradient2(low = "blue", high = "red", mid = "white", 
-   midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
+g<-ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+ labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white",midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
    name="Pearson\nCorrelation")
-
+g
 
 ```
+
+
 
 
 
