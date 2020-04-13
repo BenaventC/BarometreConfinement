@@ -7,9 +7,9 @@ Cette analyse est conduite en 3 mouvements :
 
  * 1) extraction quotidienne des données dans API rest de twitter (et filtrage pour analyses spécifiques, ie uniquement les RT).
  * 2) annotation systématique avec les différents outils et constitution du fichier de travail.
- * 3) les analyses statistiques menées sur le fichier de travail : analyse baromètrique ( heure et jour), corrélation des indicateurs, segmentation des twittos, 
+ * 3) les analyses statistiques menées sur le fichier de travail : analyse baromètrique ( heure et jour), corrélation des indicateurs, segmentation des twittos.
 
-A ce jour -j+24, la base primaire comporte 1.5 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go). On se concentre sur les 250ko de messages primaires.
+A ce jour -j+26, la base primaire comporte 1.6 millions de tweets, rt et quote. Un extrait (df.rds) est disponible dans le repo pour tester les proc (le fichier entier dépasse les 1,5 Go). On se concentre sur les 270ko de messages primaires.
 
 L'idée est de tester sur ce corpus des instrument de mesure du sentiment de manière systématique. Dans ce contexte l'objectif de projet est d'évaluer dans quelle mesure, ces outils permettent de capter les variations des émotions de la population au fil des jours et des évènements et de l'actualité. Les différents indicateurs sont-ils convergents? Sont-il fiables et sensibles?
 
@@ -22,7 +22,7 @@ L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr e
 Quelques questions en cours d'exploration:
   * [Introduction](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
   * Construire une [frise chronologique des évenements](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing).
-  * La procédure d'[extraxtion des tweets](https://benaventc.github.io/BarometreConfinement/LdC1_extract_V01_bc)
+  * La procédure d'[extraction des tweets](https://benaventc.github.io/BarometreConfinement/LdC1_extract_V01_bc) et [celle d'annotation](https://benaventc.github.io/BarometreConfinement/LdC2_annotation_V01_bc)
   * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)
   * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
   * L'analyse des auto-corrélations et corrélations croisées (ts). Nous avons besoin d'un économètre.
