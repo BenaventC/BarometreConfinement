@@ -12,7 +12,9 @@ output:
 
 Lundi 14 , Emmanuel Macron a tenu son second discours. Long de 28 mn et débutant à 8h02, juste après les applaudissements, il a réunis une part importante de la population. Quel effet sur le sentiment ?
 
-C'est à cette question que notre étude va répondre par la méthode suivante : nous allons simplement comparer les sensitment observé avant et après l'intervention, à ceux qu'un modèle de prédiction simple (autorégression aurait donné). Comme le discours était annoncé depuis plusieurs jorus que des indications filtraient d'inscricrétion plus ou moins bien observé, il est bien possible que l'intervention aient une action avant même l'allocution. On sera donc attentif au choix des dates seuils. Et on testera deux modèles, l'un qui prend toute l'information jusqu'à 1h avant l'intervention, un autre qui s'arrête la veille. Mais on peut moduler l'approche.
+C'est à cette question que notre étude va répondre par une méthode de contrefactuel. Celle-ci consiste à  comparer les sensiments observés après l'intervention, à ceux qu'un modèle de prédiction simple (autorégression) permet d'obtenir et qui sont supposer mesure l'opinion s'il n'y avait pas eu cette évènement. L'écart entre les deux ensembles de valeur mesurerait l'effet des discour, même s'il faut garder à l'esprit que dans les heures suivant le discours, d'autres événements se succèdent.
+
+Comme le discours était annoncé depuis plusieurs jours que des indiscretions  filtraient, il est bien possible que l'intervention aie une action avant même l'allocution. On sera donc attentif au choix des dates seuils. Et on testera deux modèles, l'un qui prend toute l'information jusqu'à 1h avant l'intervention, un autre qui s'arrête la veille. Mais on peut moduler l'approche.
 
 ## Les outils de l'analyse
 
@@ -21,7 +23,7 @@ A cette fin on utilise les packages suivants.
 Quelques recodages de date pour obtenir les unités J+1, J+2...
 
 ```{r setup, message=FALSE,warning=FALSE}
-knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE, fig.width = 8)
 library(tidyverse) #l'environnement de base : données et visus
 library(reshape2)
 library(gridExtra) #associer des ggplot
@@ -68,7 +70,7 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
   )+  scale_x_datetime(date_breaks = "2 day", labels = scales::label_date_short()) + geom_vline(xintercept = date_macron,  color = "lightgrey", size=4)
 ```
 
-##création de la série
+## Création de la série
 
 Le traitement de la série demande à ce qu'on la transforme en objet ts pour r. L'idée c'est d'utiliser l'histoire passée ( jusqu'avant le discours) pour prédire le niveau de sentiment après le discours. 
 
@@ -89,7 +91,7 @@ ts<- zoo(foo$positive, order.by=foo$date2)
 
 ```
 
-## diagnostic de la série
+## Diagnostic de la série
 
 from https://rstudio-pubs-static.s3.amazonaws.com/9428_1197bd003ebd43c49b429f22ea4f36e5.html
 
@@ -118,7 +120,8 @@ ggplot(data = spec.df)+ geom_line(aes(x = freq, y = spec),color="firebrick") + s
 ```
 
 ## la dynamique du sentiment
-On utilise la fonction auto.arima de forecast qui choist le meilleur modèle au sens de l'AIC.
+
+On utilise la fonction auto.arima de forecast qui choisit le meilleur modèle au sens de l'AIC.
 
 La figure donne une idée de l'ajustement du modèle. 
 
@@ -130,9 +133,10 @@ matplot(cbind(coredata(ts),fitted(d.arima)),type='l')
 
 
 ```
-## ce que le sentiment aurait du être
 
-La prédiction se fait aussi simplement
+## Ce que le sentiment aurait du être (contrefactuel)
+
+La prédiction se fait aussi simplement que l'estimation du modèle avec forecast. On prédit autant de périodes que de périodes observées après le discours du Président Macron.
 
 ```{r prediction}
 d.forecast <- forecast(d.arima, level = c(95), h = 102)
@@ -140,9 +144,12 @@ d.forecast <- forecast(d.arima, level = c(95), h = 102)
 autoplot(d.forecast)+theme_minimal()
 ```
 
+## La comparison de la prédiction et des observations
+
 On en représente le résultat en comparant les données observées à la prédiction et en examinant les écarts. On utilise une somme cumulative pour mieux marquer l'effet.
 
 Elle doit être interprêté avec prudence.
+
 ```{r prediction2}
 
 foo2<-sentevol %>% ungroup %>% filter(date2>date_macron) %>% select(date2,negative,positive) %>% mutate(negative=-1*negative,  sentiment=positive+negative)
@@ -165,9 +172,8 @@ ggplot(foo2, aes(x=date2,y=value,group=variable))+
 ```
 
 
+## même procédure pour la negativity
 
-
-### negativity
 ```{r serie3, message=FALSE,warning=FALSE}
 library(zoo)
 ts<- zoo(foo$negative, order.by=foo$date2)
@@ -177,9 +183,9 @@ acf(coredata(ts),lag.max = 240, main="Temperature is Highly Autocorrelated!")
 pacf(coredata(ts),lag.max = 240, main="Temperature is Highly Autocorrelated!")
 
 mspect <- spec.pgram(coredata(ts))
-plot(mspect, log = "no")
-k = kernel("daniell", c(5,5))
-smooth.spec <- spec.pgram(coredata(ts), kernel = k, taper = 0)
+#plot(mspect, log = "no")
+#k = kernel("daniell", c(5,5))
+#smooth.spec <- spec.pgram(coredata(ts), kernel = k, taper = 0)
 
 spec.df <- data.frame(freq = mspect$freq, spec = mspect$spec)
 
@@ -189,7 +195,7 @@ yrs.freqs <- 1/day.period  #Convert annual period to annual freq, and then to mo
 mspect$period <- 1/spec.df$freq
 
 ggplot(data = spec.df)+ geom_line(aes(x = freq, y = spec)) + scale_x_continuous("Period (heure)", 
-    breaks = yrs.freqs, labels = day.labels) + scale_y_continuous()
+    breaks = yrs.freqs, labels = day.labels) + scale_y_continuous() +theme_minimal()
 
 # from https://rstudio-pubs-static.s3.amazonaws.com/9428_1197bd003ebd43c49b429f22ea4f36e5.html
 
@@ -226,7 +232,7 @@ ggplot(foo2, aes(x=date2,y=value,group=variable))+
 
 # Conclusion
 
-La production de flux n'est pas l'agrégation de productions individuelles similiaires, elle dépend de groupes d'individus qui se distinguent par la fréquence de leur post et très probablement par les motifs de leur activité : des réactions spontanées et ponctuelles, un engagement plus net qui conduit à récidiver pendants quelques twts ou une conversation, un engagement plus soutenu et une sorte de fidélité aux #. Une determination dont il faut vérifier la motivation ( bot, troll, pathologe...) qui conduit à une production effrenée. 
+La production de flux n'est pas l'agrégation de productions individuelles similiaires, elle dépend de groupes d'individus qui se distinguent par la fréquence de leur post et très probablement par les motifs de leur activité : des réactions spontanées et ponctuelles, un engagement plus net qui conduit à récidiver pendant quelques tweets ou une conversation, un engagement plus soutenu et une sorte de fidélité aux #. Une determination dont il faut vérifier la motivation ( bot, troll, pathologe...) qui conduit à une production effrenée. 
 
 Des questions se posent et doivent être résolues:
 
@@ -238,5 +244,5 @@ Des questions se posent et doivent être résolues:
 
 
 
-#Références
+# Références
   
