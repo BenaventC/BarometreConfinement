@@ -1,0 +1,242 @@
+---
+title: "Mesurer l'effet du discours (Macron 13 avril)"
+author: "CB"
+date: "31 mars 2020"
+output:
+  html_document: default
+  word_document: default
+---
+![Lennon Wall Praha](montagemasque.jpg)
+
+
+
+Lundi 14 , Emmanuel Macron a tenu son second discours. Long de 28 mn et débutant à 8h02, juste après les applaudissements, il a réunis une part importante de la population. Quel effet sur le sentiment ?
+
+C'est à cette question que notre étude va répondre par la méthode suivante : nous allons simplement comparer les sensitment observé avant et après l'intervention, à ceux qu'un modèle de prédiction simple (autorégression aurait donné). Comme le discours était annoncé depuis plusieurs jorus que des indications filtraient d'inscricrétion plus ou moins bien observé, il est bien possible que l'intervention aient une action avant même l'allocution. On sera donc attentif au choix des dates seuils. Et on testera deux modèles, l'un qui prend toute l'information jusqu'à 1h avant l'intervention, un autre qui s'arrête la veille. Mais on peut moduler l'approche.
+
+## Les outils de l'analyse
+
+A cette fin on utilise les packages suivants.
+
+Quelques recodages de date pour obtenir les unités J+1, J+2...
+
+```{r setup, message=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE, message=FALSE,warning=FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(reshape2)
+library(gridExtra) #associer des ggplot
+library(scales) #pour les échelles de temps et de date
+library(lubridate)
+library(zoo) 
+
+df<- readRDS(file = "df_nrcliwclsd.rds") 
+
+#construire des dates jour/heures
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # année
+
+df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+
+```
+## Descrition de la série 
+https://www.statmethods.net/advstats/timeseries.html
+
+le courbe du sentiment est place qu'il soit positif ou négatif. Elle semble le fruit d'un sysmographe, ce qui varie n'est pas le niveau, mais la variance. Des chocs d'information introduisent de la perturbation? (modèle garch? ). La barre verticale marque l'heure du début de discours de macron qui manifestement agite le sentiment.
+
+
+```{r serie, fig.width=9}
+sentevol<-df %>% group_by(month,day,hour) %>% mutate(n=1) %>%summarise(positive=mean(positive, na.rm=TRUE),negative=mean(negative, na.rm=TRUE), n=sum(n))
+sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$hour,":00:00")
+sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
+sentevol<- sentevol %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+
+foo<-sentevol %>% ungroup %>% filter(Jour>0 & Jour<31) %>% select(date2,negative,positive)%>%mutate(negative=-negative)
+
+date_macron <-ymd_h("2020-04-13 19")
+
+foo<-melt(foo, id=c("date2"))
+ggplot(foo, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Evolution des valences du sentiment #ConfinementJour", y="Valence (+/-)",x="dates (par heure)",
+    subtitle = "Par heure - zone en gris: le discours du Président",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "2 day", labels = scales::label_date_short()) + geom_vline(xintercept = date_macron,  color = "lightgrey", size=4)
+```
+
+##création de la série
+
+Le traitement de la série demande à ce qu'on la transforme en objet ts pour r. L'idée c'est d'utiliser l'histoire passée ( jusqu'avant le discours) pour prédire le niveau de sentiment après le discours. 
+
+On se concentre sur le sentiment positif, on fera de même en un bloc pour le négatif.
+
+```{r tseries}
+foo<-sentevol %>% ungroup %>% 
+  filter(date2<date_macron) %>% 
+  select(date2,negative,positive) %>% 
+  mutate(negative=-1*negative, sentiment=positive+negative)
+
+foo2<- sentevol %>% ungroup %>% filter(date2<date_macron) %>% select(date2) 
+
+# creation sous forme d'objet ts via zoo
+
+#library(zoo) 
+ts<- zoo(foo$positive, order.by=foo$date2)
+
+```
+
+## diagnostic de la série
+
+from https://rstudio-pubs-static.s3.amazonaws.com/9428_1197bd003ebd43c49b429f22ea4f36e5.html
+
+https://rpubs.com/sinhrks/plot_tsstats
+
+```{r diagno}
+acf(coredata(ts),lag.max = 240, main="de l'autocorrélation et de la saisonnalité!")
+pacf(coredata(ts),lag.max = 240, main="de l'autocorrélation et de la saisonnalité!")
+
+mspect <- spec.pgram(coredata(ts))
+plot(mspect, log = "no")
+#avec lissage
+#k = kernel("daniell", c(5,5))
+#smooth.spec <- spec.pgram(coredata(ts), kernel = k, taper = 0)
+
+spec.df <- data.frame(freq = mspect$freq, spec = mspect$spec)
+
+day.period <- rev(c(1/24,1/12, 1/6,1, 2, 3, 4, 6, 12, 24))
+day.labels <- rev(c("1/24","1/12", "1/6","1", "2", "3","4", "6", "12", "24"))
+yrs.freqs <- 1/day.period  #Convert annual period to annual freq, and then to monthly freq
+mspect$period <- 1/spec.df$freq
+
+ggplot(data = spec.df)+ geom_line(aes(x = freq, y = spec),color="firebrick") + scale_x_continuous("Period (heure)", 
+    breaks = yrs.freqs, labels = day.labels) + scale_y_continuous()+theme_minimal()
+
+```
+
+## la dynamique du sentiment
+On utilise la fonction auto.arima de forecast qui choist le meilleur modèle au sens de l'AIC.
+
+La figure donne une idée de l'ajustement du modèle. 
+
+```{r modelisation}
+library(forecast)
+d.arima <- auto.arima(coredata(ts))
+d.arima
+matplot(cbind(coredata(ts),fitted(d.arima)),type='l')
+
+
+```
+## ce que le sentiment aurait du être
+
+La prédiction se fait aussi simplement
+
+```{r prediction}
+d.forecast <- forecast(d.arima, level = c(95), h = 102)
+
+autoplot(d.forecast)+theme_minimal()
+```
+
+On en représente le résultat en comparant les données observées à la prédiction et en examinant les écarts. On utilise une somme cumulative pour mieux marquer l'effet.
+
+Elle doit être interprêté avec prudence.
+```{r prediction2}
+
+foo2<-sentevol %>% ungroup %>% filter(date2>date_macron) %>% select(date2,negative,positive) %>% mutate(negative=-1*negative,  sentiment=positive+negative)
+foop<-d.forecast[4]
+foo2<-cbind(foo2, foop)%>% select(date2,positive, mean) %>% mutate(ecart=positive-mean, ecart_cumul=cumsum(ecart))%>%rename(prediction=mean, observed=positive)
+
+col_macron<-c("darkblue","gold3","firebrick","coral2")
+foo2<-melt(foo2, id="date2")
+ggplot(foo2, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+# stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Impact du discours macron sur la positivité des tweets", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Valence par heure",
+    caption = "\nSource: Data collected by Labo du confinement from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "4 hour", labels = scales::label_date_short()) + geom_vline(xintercept = date_macron,  color = "brown4", size=2)+
+  scale_colour_manual(values=col_macron)
+
+```
+
+
+
+
+### negativity
+```{r serie3, message=FALSE,warning=FALSE}
+library(zoo)
+ts<- zoo(foo$negative, order.by=foo$date2)
+plot(ts, xlab="Date", ylab="Cases")
+
+acf(coredata(ts),lag.max = 240, main="Temperature is Highly Autocorrelated!")
+pacf(coredata(ts),lag.max = 240, main="Temperature is Highly Autocorrelated!")
+
+mspect <- spec.pgram(coredata(ts))
+plot(mspect, log = "no")
+k = kernel("daniell", c(5,5))
+smooth.spec <- spec.pgram(coredata(ts), kernel = k, taper = 0)
+
+spec.df <- data.frame(freq = mspect$freq, spec = mspect$spec)
+
+day.period <- rev(c(1/24,1/12, 1/6,1, 2, 3, 4, 6, 12, 24))
+day.labels <- rev(c("1/24","1/12", "1/6","1", "2", "3","4", "6", "12", "24"))
+yrs.freqs <- 1/day.period  #Convert annual period to annual freq, and then to monthly freq
+mspect$period <- 1/spec.df$freq
+
+ggplot(data = spec.df)+ geom_line(aes(x = freq, y = spec)) + scale_x_continuous("Period (heure)", 
+    breaks = yrs.freqs, labels = day.labels) + scale_y_continuous()
+
+# from https://rstudio-pubs-static.s3.amazonaws.com/9428_1197bd003ebd43c49b429f22ea4f36e5.html
+
+```
+
+```{r serie4, message=FALSE,warning=FALSE}
+library(forecast)
+d.arima <- auto.arima(coredata(ts))
+d.forecast <- forecast(d.arima, level = c(95), h = 102) #reajuster à chauqe maj des données
+matplot(cbind(coredata(ts),fitted(d.arima)),type='l')
+
+autoplot(d.forecast)+theme_minimal()
+
+foo2<-sentevol %>% ungroup %>% filter(date2>date_macron) %>% select(date2,negative,positive) %>% mutate(negative=-1*negative,  sentiment=positive+negative)
+foop<-d.forecast[4]
+foo2<-cbind(foo2, foop)%>% select(date2,negative, mean) %>% mutate(ecart=negative-mean, ecart_cumul=cumsum(ecart))%>%rename(prediction=mean, observed=negative)
+
+foo2<-melt(foo2, id="date2")
+col_macron<-c("darkblue","gold3","firebrick","coral2")
+
+ggplot(foo2, aes(x=date2,y=value,group=variable))+
+  geom_line(size=1,aes(color=variable))+
+  theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
+  theme_minimal()+# stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
+  labs(x = NULL, y = NULL,
+    title = "Impact du discours macron sur la négativité des tweets", y="Valence (+/-)",x="dates (par heures)",
+    subtitle = "Valence par heure",
+    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "4 hour", labels = scales::label_date_short()) + geom_vline(xintercept = date_macron,  color = "brown4", size=2)+scale_color_manual(values=col_macron)
+
+```
+
+
+
+# Conclusion
+
+La production de flux n'est pas l'agrégation de productions individuelles similiaires, elle dépend de groupes d'individus qui se distinguent par la fréquence de leur post et très probablement par les motifs de leur activité : des réactions spontanées et ponctuelles, un engagement plus net qui conduit à récidiver pendants quelques twts ou une conversation, un engagement plus soutenu et une sorte de fidélité aux #. Une determination dont il faut vérifier la motivation ( bot, troll, pathologe...) qui conduit à une production effrenée. 
+
+Des questions se posent et doivent être résolues:
+
+ * Examiner le rôle des superposteurs : des bots ? des spammeurs ? des trolls ?
+ * Affiner la relation entre l'expérience et le style.
+ * Un developpement serait de reconstituer les chaines de tweets.
+ * Se poser la question de l'élimination des superposteurs des analyses de contenu.
+
+
+
+
+#Références
+  

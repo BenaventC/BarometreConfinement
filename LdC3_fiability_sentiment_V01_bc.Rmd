@@ -37,7 +37,7 @@ Lecture du fichier annoté.
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_lsd.rds") 
+df<- readRDS(file = "df_nrcliwclsd.rds") 
 
 ```
 
@@ -140,12 +140,12 @@ df$year<-2020 # heure
 
 
 df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
-Jour2 <- c(2,8,20)
+Jour2 <- c(2,8,15,27)
 for (val in Jour2) {
   M<-df %>% filter(Jour==val)%>%select(negative,émonég,Neg_lsdfr, positive,émopos,Pos_lsdfr)
   R <- cor(M)
   print(R)
-  corrplot.mixed(R, order="hclust",number.cex=0.75, tl.cex=0.75)
+  corrplot.mixed(R,number.cex=0.75, tl.cex=0.75)
 }
 
 ```
@@ -162,7 +162,7 @@ On doit s'interroger sur le caractère stationnaire de la série mesurée à l'�
 
 La stationnarité incite à penser à ce que le processus est dominé par une normes de styles que des chocs extérieurs pertubent le temps de quelques heures avant de retrouver une ligne de base.
 
-```{r score01, gig.width=9}
+```{r score01, fig.width=9}
 sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopos+Pos_lsdfr , 
                          negatif =Neg_lsdfr+émonég+negative,anger+disgust+fear+sadness ) %>% 
   group_by(year,month,day,hour) %>% 
@@ -173,18 +173,18 @@ sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$ho
 
 sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H:%M:%S"))
 
-foo<-sentevol%>%select(date2, negatif,positif)
+foo<-sentevol %>%filter(month>3 & day>5)%>%select(date2,negatif,positif) 
 
 foo<-melt(foo, id=c("date2"))
 ggplot(foo, aes(x=date2,y=value,group=variable))+
-  geom_line(size=1,aes(color=variable))+
+  geom_line(size=1.2,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
-  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "gam")+
+  theme_minimal()+ stat_smooth(  aes(color =variable, fill = variable),  method = "loess")+
   labs(x = NULL, y = NULL,
     title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
     subtitle = "Valence par heure",
     caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
-  )+  scale_x_datetime(date_breaks = "1 day",minor_breaks=NULL, labels = scales::label_date_short())+ facet_wrap(vars(variable),ncol=1)+ theme(axis.title.x = element_text(size = .5, angle = 00))
+  )+  scale_x_datetime(date_breaks = "1 day",minor_breaks=waiver(), labels = scales::label_date_short())+ facet_wrap(vars(variable),ncol=1)+ theme(axis.title.x = element_text(size = .5, angle = 00))
 ```
 
 # de 8 h en 8h 
@@ -194,9 +194,11 @@ A cette échelle il semble qu'un cyclicité se manifeste pour les sentiments pos
 ```{r score02, fig.width=7}
 df$ampm<-0
 
-df$ampm[df$hour<4 | df$hour>19]<-4
-df$ampm[df$hour>3 & df$hour<12 ]<-12
-df$ampm[df$hour>11 & df$hour<20 ]<-20
+df$ampm[df$hour>3 & df$hour<10 ]<-9
+df$ampm[df$hour>9 & df$hour<15 ]<-14
+df$ampm[df$hour>14 & df$hour<21 ]<-20
+df$ampm[df$hour<4 | df$hour>19]<-3
+
 
 ggplot(df, aes(x=ampm))+geom_bar()
 sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopos+Pos_lsdfr , 
@@ -208,7 +210,7 @@ sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopo
 sentevol$date<-paste0("2020","-",sentevol$month,"-",sentevol$day," ",sentevol$ampm,":00:00")
 sentevol$date2 <- as.POSIXct(strptime(sentevol$date, "%Y-%m-%d %H"))
 
-foo<-sentevol %>%ungroup()%>% select(date2, negatif,positif)
+foo<-sentevol %>%ungroup()%>% filter(month>3 & day>7)%>%select(date2, negatif,positif)
 
 foo<-melt(foo, id=c("date2"))
 ggplot(foo, aes(x=date2,y=value,group=variable))+
@@ -218,7 +220,7 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
   stat_smooth( aes(color =variable, fill = variable),  method = "loess")+
   labs(x = NULL, y = NULL,
     title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
-    subtitle = "Valence par 6 heure",
+    subtitle = "Valence par 6 heures",
     caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
   )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
@@ -240,7 +242,7 @@ sentevol<-df %>% mutate( positif=surprise+anticipation+trust+joy+positive+émopo
 foo<-sentevol %>% ungroup %>%select(Jour, positif,negatif) %>%mutate (positif=positif-first(positif), negatif=negatif-first(negatif))
 #expression=positive+negative, polarity=positive-negative
 library(reshape2)
-foo<-melt(foo, id=c("Jour")) %>%filter(Jour<23)
+foo<-melt(foo, id=c("Jour")) %>%filter(Jour<31)
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
@@ -249,7 +251,7 @@ ggplot(foo, aes(x=Jour,y=value,group=variable))+
     title = "Evolution de la valence du sentiment du confinement", y="Valence (+/-)",x="dates (par heures)",
     subtitle = "Ecart de Valence relative à J1 : moyennes Journalières",
     caption = "\nSource: Data collected by #LaboduConfinement from Twitter's REST API via rtweet"
-  )+geom_smooth(method="loess", aes(color=variable))+ylim(-0.3,+0.8)
+  )+geom_smooth(method="loess", aes(color=variable))+ylim(-0.5,+0.8)
 ```
 
 ### Expressivité et polarité
