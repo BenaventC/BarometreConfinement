@@ -268,7 +268,7 @@ names(emojis_raw) <- c("char", "unicode", "occurrences", "position", "negative",
     summarise(min_sentsc = min(sentiment_score),mean_sentsc = mean(sentiment_score), max_sentsc = max(sentiment_score))
 
 emos_in_tweets <- emos_in_tweets   %>% left_join(tweet_emoscores, by=c("user_id" = "user_id", "created_at" = "created_at"))
-    write_rds(resemotw,"emos_20.rds")
+    write_rds(emos_in_tweets,"emos_20.rds")
 ```
 
 Pour ne pas allourdir le fichier des annotations précedent (nrc et liwc) qui a déjà plus d'une centaine de colonnes on crée un fichier séparé qui peut être collé (verticalement à l'autre par cbind).
