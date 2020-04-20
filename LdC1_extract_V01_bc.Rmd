@@ -85,7 +85,7 @@ df25<-readRDS(file = "df_consoj25.rds")
 df26<-readRDS(file = "df_consoj26.rds")
 
 
-df_26<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, followers_count)
+df_26<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,location ,friends_count ,followers_count,statuses_count ,listed_count ,favourites_count,account_created_at ,verified ,hashtags,mentions_screen_name)
 write_rds(df_26,"df_26.rds")
 
 #on crée un échantillon 
