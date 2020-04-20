@@ -238,6 +238,43 @@ Comportement
 ##le traitement des emojis.
 
  c'est une question essentielle mais résolue par [Sophie Balech](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html) .....
+ 
+ 
+```{r}
+library(tidyverse)
+library(emo)
+library(rvest)
+url <- "http://kt.ijs.si/data/Emoji_sentiment_ranking/index.html"
+
+# Emoji_sentiment_ranking
+emojis_raw <- url %>%
+  read_html() %>%
+  html_table() %>%
+  data.frame() %>%
+  select(-Image.twemoji., -Sentiment.bar.c.i..95..)
+names(emojis_raw) <- c("char", "unicode", "occurrences", "position", "negative", "neutral", "positive", "sentiment_score", "description", "block")
+
+  # isoler et compter les émojis par tweet
+    emos_in_tweets <- df %>%
+     mutate(emoji = emo::ji_extract_all(text)) %>%
+     mutate(nemoji=lapply(emoji, length)) %>%
+    select(user_id, created_at, emoji, nemoji)
+
+  # calculer score sentiment min, moyen et max exprimés par les emojis présets dans un tweet
+    tweet_emoscores <- emos_in_tweets %>%
+    unnest(emoji = c(emoji)) %>%
+    inner_join(emojis_raw, by=c("emoji"="char")) %>%
+    group_by(user_id,created_at) %>% 
+    summarise(min_sentsc = min(sentiment_score),mean_sentsc = mean(sentiment_score), max_sentsc = max(sentiment_score))
+
+emos_in_tweets <- emos_in_tweets   %>% left_join(tweet_emoscores, by=c("user_id" = "user_id", "created_at" = "created_at"))
+    write_rds(resemotw,"emos_20.rds")
+```
+
+Pour ne pas allourdir le fichier des annotations précedent (nrc et liwc) qui a déjà plus d'une centaine de colonnes on crée un fichier séparé qui peut être collé (verticalement à l'autre par cbind).
+Le fichier des annotations emoji df_emos_xx.rds) en plus des deux premières colonne pivot ("user_id"     "created_at") contient les colonnes:
+emoji (les emojis extraits du tweet), nemoji (nombre d'emoji du tweet), et un résumé des scores de sentiments des emojis d'un tweet avec min_sentsc (le score min des emoji du tweet),  mean_sentsc (le score moyen des emoji du tweet) et max_sentsc (le score max des emoji du tweet)   
+
 
 ## Approche via ML
 
