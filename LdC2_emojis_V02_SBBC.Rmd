@@ -29,7 +29,7 @@ L'objectif ici est d'exploiter les émoticônes et émojis présents dans un cor
 On utilise les tweets du corpus #confinement, ici le fichier df_sample
 
 ```{r data}
-licws<- sample_n(liwc,100000)
+df<- sample_n(df,100000)
 ```
 
 
@@ -61,9 +61,9 @@ link_to_img <- function(x, size = 25) {
 Grâce au package 'emo', on extrait facilement des tweets les emojis présentes et on peut les représenter graphiquement :
 
 ```{r emojis, fig.height=8}
-happy_emojis <- licws %>%
+happy_emojis <- df %>%
   mutate(emoji = emo::ji_extract_all(text)) %>%  #on extrait les emojis sous forme de liste
-  unnest(cols = c(emoji)) %>% #on crée une ligne par émoji
+  unnest(emoji = c(emoji)) %>% #on crée une ligne par émoji
   count(emoji, sort = TRUE) #on compte les occurrences
 
 top_happy <- happy_emojis %>%
@@ -104,14 +104,14 @@ rep : il faut jouer les le posixct.....
 
 ```{r pressure, echo=FALSE}
 #####
-foo<- df_nrc %>% group_by(month,day) %>% 
-  mutate(n=1) %>%   
+foo<- df_nrcliwc %>% group_by(month,day) %>% 
+ # mutate(n=1) %>%   
   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
 foo$date<-paste0("2020","-",foo$month,"-",foo$day)
 foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d"))
 
-foo<-foo %>% ungroup %>%select(date2,ami, famille, humain )
-foo<-melt(foo,id=c("date2"))
+foo<-foo %>% select(date2,ami, famille, humain ) # ungroup %>% # eliminated
+require(data.table); foo<-melt(foo,id=c("date2"))
 
 emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
 
@@ -125,7 +125,7 @@ ggplot(foo, aes(x=date2,y=value,group=variable))+
 
 emo<-licws %>%
   mutate(emoji = emo::ji_extract_all(text)) %>%
-  unnest(cols=c(emoji))%>%
+  unnest(emoji=c(emoji))%>%
   filter(emoji==top_happy$emoji)
 
 emo<-emo%>%
@@ -175,7 +175,7 @@ emo_sent <- licws %>%
   unnest(cols = c(emoji))%>%
   inner_join(emojis_raw, by=c("emoji"="char"))
 
-# Les tweets les plus négatifs
+# Les emojis (des tweets) les plus négatifs
 emo_sent%>%
   group_by(text)%>%
   summarise(sentiment=sum(sentiment_score))%>%
@@ -184,7 +184,7 @@ emo_sent%>%
   head(10)
 
 
-# Les tweets les plus positifs
+# Les emojis (des tweets) les plus positifs
 emo_sent%>%
   group_by(text)%>%
   summarise(sentiment=sum(sentiment_score))%>%
@@ -193,7 +193,7 @@ emo_sent%>%
   tail(10)
 
 
-#Graphique de l'évolution du sentiment moyen dans le temps
+#Graphique de l'évolution du sentiment moyen (des emojis) dans le temps
 
 emo_sent%>%
   group_by(day)%>%
