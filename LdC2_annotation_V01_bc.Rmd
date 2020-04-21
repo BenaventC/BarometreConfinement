@@ -180,6 +180,7 @@ analyseSentiments <- dfm(df_senti, dictionary = dic_ton)
 dfBaseSpecifique=data.frame(analyseSentiments,nb=ntoken(df_senti), id=rownames(df))
 dfBaseSpecifique<-dfBaseSpecifique %>% rename(Pos_lsdfr=POSITIVE, Neg_lsdfr=NEGATIVE)
 df_lsd<-cbind(df,dfBaseSpecifique)
+write_rds(df_lsd, "df_lsd_32.rds")
 
 M<-subset(df_lsd, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
 M <- cor(M)
