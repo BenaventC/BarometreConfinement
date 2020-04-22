@@ -519,7 +519,64 @@ g17 <- ggplot(foo, aes(x=Jour,y=value,group=variable))+
 ggplotly(g17)
 ```
 
+Convergence des indicateurs {.storyboard}
+============================
+
+### Convergence des indicateurs
+
+```{r}
+r_sent<-subset(df_nrc, select=c( negative,émonég,positive, émopos))
+cor2 <- cor(r_sent)
+corrplot.mixed(cor2)
+```
+
+### Facettes et sentiments
+
+```{r}
+M1<-subset(df_nrc, select=c(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive))
+
+M2<-subset(df_nrc, select=c( alimentation,sexualité, santé,corps,ami, famille, humain))
+cor2 <- cor(M2)
+library(corrplot)
+corrplot.mixed(cor2, order = "hclust", addrect = 2)
+```
+
+***
+Regardons les relations entre émotions et expérience via https://jokergoo.github.io/ComplexHeatmap-reference/book/a-single-heatmap.html
+
+### Analyse Factorielle
+
+```{r}
+fit <- factanal(M1,2, rotation="promax")
+#print(fit, digits=2, cutoff=.3, sort=TRUE)
+# plot factor 1 by factor 2
+load <- fit$loadings[,1:2]
+plot(load,type="n") # set up plot
+text(load,labels=names(M1),cex=.7) # add variable names
+```
+
+### Corrélations entre les domaines de l'expérience et les émotions
+
+```{r}
+val<-29
+M1<-df_nrc %>% filter (Jour ==val) %>% select(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive)
+M2<-df_nrc %>% filter (Jour ==val) %>% select( alimentation,sexualité, santé,corps,ami, famille, humain)
+cor3<-cor(x=M1,y=M2)
+library(data.table)
+cor3 <- reshape2::melt(cor3)
+g18<-ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) + 
+    geom_tile()+ labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
+    scale_fill_gradient2(low = "blue", high = "red", mid = "white",midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
+   name="Pearson\nCorrelation")
+ggplotly(g18)
+
+```
+*** 
+The End ;-)
+
 ```{r}
 rm(list=ls())
 ```
+
+
 
