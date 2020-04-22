@@ -688,6 +688,42 @@ g
 
 ```
 
+## Animation Jour 
+
+
+```{r}
+library(gganimate)
+library(magick)
+
+### Corrélations entre les domaines de l'expérience et les émotions
+
+dfs<-df_nrc %>% select(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive, alimentation,sexualité, santé,corps,ami, famille, humain,Jour)
+dfs <- split(dfs,dfs$Jour)
+cors=NULL
+for(i in 1:length(dfs)){
+  #i=2
+  M1 <- dfs[[i]][1:10]
+  M2 <-  dfs[[i]][10:17]
+  cor3 <- cor(x=M1,y=M2)
+  cor3 <- cbind(reshape2::melt(cor3),Jour=i)
+  cors = rbind(cors,cor3)
+}
+
+g <- cors %>% ggplot(aes(x=Var1, y=Var2, fill=value)) + 
+  geom_tile()+ 
+  labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white",midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
+                       name="Pearson\nCorrelation")
+
+a <- g + transition_time(Jour) +
+  labs(title = "Jour: {frame_time}") 
+animate(a,duration = 99, nframes=33) # fixe la durée d'un frame (du jour) à 3 sec
+anim_save("goo.gif", a)
+
+```
+
+![](goo.gif)
+
 
 
 
