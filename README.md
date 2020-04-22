@@ -30,6 +30,6 @@ Quelques questions en cours d'exploration:
   * Approche par LDA (Julien Monnot)
   * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
   * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
-  * dashboard : avec [flexdashboard](https://rpubs.com/calciu/595731)
+  * dashboard : avec [flexdashboard](https://rpubs.com/calciu/602700)
   * Parallélisation des calculs sur le cluster de l'([Université de Lille](http://hpc.univ-lille.fr/cluster-hpc-htc)) by Michel Calciu. ( gain : de 8h de calcul pour l'annotation à 8mn). le [code est ici](https://benaventc.github.io/BarometreConfinement/LdC2_annotationParallele_V01_cm.html) 
   * La dimension spatiale via la geolocalisation des tweets est une néçessité, nous n'avons pas de spécialiste encore.
