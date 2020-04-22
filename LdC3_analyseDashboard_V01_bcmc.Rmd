@@ -22,8 +22,8 @@ senticol <-c("firebrick","royalblue3", "darkgreen")
 #émotions
 emocol<-c("red3","orangered1","olivedrab3", "chartreuse","royalblue3","green4","yellow","purple3") #en respectant des codes mais il faudra adoucir.
 
-df_nrc <- readRDS("~/Documents/Collaborations/christophe/BarometreConfinement-data/df_nrcliwc_20.rds")
-df_nrc <- sample_n(df_nrc, 10000)
+df_nrc <- readRDS("df_nrcliwc_20.rds")
+df_nrc <- sample_n(df_nrc, 80000)
 ```
 
 
