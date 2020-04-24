@@ -25,7 +25,7 @@ Quelques questions en cours d'exploration:
   * La procédure d'[extraction des tweets](https://benaventc.github.io/BarometreConfinement/LdC1_extract_V01_bc) et [celle d'annotation](https://benaventc.github.io/BarometreConfinement/LdC2_annotation_V01_bc)
   * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)
   * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
-  * Des réseaux sémantiques : [celui des #, des @ et des emos](https://benaventc.github.io/BarometreConfinement/LdC3_planetarium_V01_sb)
+  * Des réseaux sémantiques : [celui des #, des @ et des emos](https://benaventc.github.io/BarometreConfinement/LdC3_planetarium_V01_sb.html)
   * L'analyse des auto-corrélations et corrélations croisées (ts). Nous avons besoin d'un économètre. L'impact des "news" sur le sentiment. Un exemple avec le [discours du 13 avril](https://benaventc.github.io/BarometreConfinement/LdC3_effetmacron_V01_bc.html))
   * L'analyse par [profils d'utisateurs](https://benaventc.github.io/BarometreConfinement/LdC3_elementary_V01_bc.html) (induction du genre, fréquence de post, nb de followers). c'est en cours
   * Approche par LDA (Julien Monnot)
