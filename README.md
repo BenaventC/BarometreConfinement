@@ -20,7 +20,8 @@ Le projet est ouvert, un petit groupe de travail s'est constitué spontanéement
 L'analyse est centrée sur l'analyse du sentiment via les méthodes NCR, LSDfr et LIWC, on envisage des méthodes spécifiques et la vectorisation du corpus. Les premiers résultats sont [lisibles ici](https://benaventc.github.io/BarometreConfinement/LdC3_analyse_V01_bc.html)
 
 Quelques questions en cours d'exploration:
-  * [Introduction](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
+  * Une première présentation de premiers [résultats](https://docs.google.com/presentation/d/14QFSAEMlOhtOcr_3D33D7yJVETeMvV1rtnJTSY1k1AI/edit?usp=sharing)
+  * [Introduction au projet](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
   * Construire une [frise chronologique des évenements](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing).
   * La procédure d'[extraction des tweets](https://benaventc.github.io/BarometreConfinement/LdC1_extract_V01_bc) et [celle d'annotation](https://benaventc.github.io/BarometreConfinement/LdC2_annotation_V01_bc)
   * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)

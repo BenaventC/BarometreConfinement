@@ -1,0 +1,104 @@
+---
+title: "Le réseau des lemmes les plus importants"
+author: "Julien Monnot"
+date: "25 avril 2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup}
+library(tidyverse)
+library(tidytext)
+#library(tm)
+library(tidygraph)
+#library(tidyr)
+#library(tidyselect)
+#library(dplyr)
+#library(ggplot2)
+library(mixr)
+#devtools::install_github("lvaudor/mixr")library(widyr)
+library(knitr)
+library(topicmodels)
+library(lubridate)
+library(graphlayouts)
+library(proustr)
+library(widyr)
+library(ggraph)
+
+df <- readRDS("dfliwclsd.rds")
+
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # heure
+
+
+df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+
+
+lex_lm <- get_lexicon("fr")
+
+df_Tok <- df %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_Tok <- left_join(df_Tok,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_Tok_Fltr <- df_Tok %>%
+  select(user_id,Mots,lemma,type,Jour) %>%
+   filter(Mots != "confinement") %>%
+  filter(Mots != "jour") %>%
+   filter(type %in% c("nom","adj")) 
+
+df_Tok_Fltr1 <- df_Tok_Fltr %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r Cooc1-17}
+
+
+for (i in 2:38) {
+  
+df_Day <- df_Tok_Fltr1 %>%
+  filter(Jour == 2)
+
+cooc <- df_Day %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+cooc2 <- cooc %>%
+  filter(n > 15)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void() + 
+   labs(title = paste("Laboratoire du Confinement Jour",i))
+
+plot(my_graph)
+print(my_graph)
+ggsave(paste("Jour",i,".jpg"))
+
+}
+
+
+
+```
+

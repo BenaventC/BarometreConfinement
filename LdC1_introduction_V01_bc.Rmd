@@ -1,56 +1,75 @@
 ---
 title: "Laboratoire du Confinement"
 author: "CB"
-date: "31 mars 2020"
+date: "26 avril 2020"
 output:
   html_document: default
 bibliography: Confinement.bib
 
 ---
-![](ponywave_masc.jpg)
+![ponywave](ponywave_masc.jpg)
 
 # Introduction au projet
 
 Ce projet est une exploration de l'intérêt des données sociales pour l'étude des phénomènes humains. Celui qui nous intéresse, l'épidémie de covid19, est à l'évidence majeur. C'est un choc inattendu, un cygne noir.
 
-Ses conséquences sont sanitaires, sociales, politiques et économiques. La manière dont les gens le vivent, du moins en France résulte d'un régime d'exception, largement adopté à travers les pays, qui vise à maintenir au domicile toutes les personnes non nécessaires au traitement de la question sanitaire, de celle de l'approvisionnement alimentaire et pharmaceutiques, et des productions fondamentales.
+Ses conséquences sont sanitaires, sociales, politiques et économiques, culturelles aussi mais les incidences seront sans doute plus lointaines. La manière dont les gens le vivent, du moins en France résulte d'un régime d'exception, largement adopté à travers les pays, qui vise à maintenir au domicile toutes les personnes non nécessaires au traitement de la question sanitaire, de celle de l'approvisionnement alimentaire et pharmaceutiques, et des productions fondamentales. Elle va durer du 16 mars au 11 mai, et à cette heure les modalités du déconfinement ne sont pas encore tout à fait établies et seront très progressives. Les étudiants ne retourneront dans les amphis qu'en septembre.
 
-Un cadre d'analyse est fourni par les spécialistes d'épidémiologie, de l'humanitaire, des organisations internationales et de la gestion des risque qui se condense dans l'expression de management du désastre.([disaster management](https://www.ifrc.org/en/what-we-do/disaster-management/about-disaster-management/)). Si la catastrophe désigne le phénomène qui frappe (guerre, tsunami, épidémie), le désastre en désigne les conséquences, l'ebranlement ou l'effondrement des systèmes matériels, économique sociaux mais aussi moraux, tout autant que les comportement qui en atténue les conséquences, et permet le rebond des communautés nécessaires dans l'horizon de la reconstruction.
+Un cadre d'analyse est fourni par les spécialistes d'épidémiologie, de l'humanitaire, des organisations internationales et de la gestion des risque qui se condense dans l'expression de management du désastre.([disaster management](https://www.ifrc.org/en/what-we-do/disaster-management/about-disaster-management/)). Si la catastrophe désigne le phénomène qui frappe (guerre, tsunami, épidémie), le désastre en désigne les conséquences, l'ébranlement ou l'effondrement des systèmes matériels, économique sociaux mais aussi moraux, tout autant que les comportement qui en atténue les conséquences, et permet le rebond des communautés nécessaires dans l'horizon de la reconstruction.
 
 Ses traits caractéristiques sont :
- * Soudaineté
- * imprédictabilité
- * IncontrollabilitéSudden onset,
- * L'instensité des destructions
+
+ * la Soudaineté
+ * L'imprédictabilité
+ * l'incontrolabilité,
+ * L'intensité des destructions
  * Les pertes humaines et la souffrance
  * L'atteinte aux capacités de réaction de la communauté affectée.
 
-Cette littérature met en avant deux idées @nojavan_conceptual_2018. 
+Cette littérature met en avant deux idées (@nojavan_conceptual_2018. )
 
- * la première est que la réponse des populations au désastre résulte de leurs émotions, de leur capacités et de leurs intérêts et qu'elle se traduit par le degré de participation aux opérations d'atténuation, par des disposition morale de rebond et de résilience, et la force du sentiment communautaire @noji_disasters_2005 . Voilà qui décrit précisement la situation actuelle : dans quelle mesure les populations participent à la construction de cette barrière virale batie sur l'idée de distance sociale ? Dans quelle mesure poursuivent-elles leurs activités en dépit des contraintes radicales du confinement et en particulier celles de l'approvisionnement ? Dans quelle mesure la communauté se soude-et-elle, notamment dans le rituel de l'applaudissement des héros ?
+ * la première est que la réponse des populations au désastre résulte de leurs émotions, de leur capacités et de leurs intérêts et qu'elle se traduit par le degré de participation aux opérations d'atténuation, par des dispositions morales de rebond et de résilience, et la force du sentiment communautaire @noji_disasters_2005 . Voilà qui décrit précisement la situation actuelle : dans quelle mesure les populations participent à la construction de cette barrière virale batie sur l'idée de distance sociale ? Dans quelle mesure poursuivent-elles leurs activités en dépit des contraintes radicales du confinement et en particulier celles de l'approvisionnement ? Dans quelle mesure la communauté se soude-et-elle, notamment dans le rituel de l'applaudissement des héros ?
  
- * la seconde est celle d'un cycle émotionnel qui après la stupeur encourage l'héroisme, auxquel la désillusion succède, jusqu'à retrouver un état apaisé qui correspond à une socité stabilisée et confiante dans son futur (autrement dit sure des évolutions qu'elle va subir, et en moyenne confiante dans ce que cette évolution va améliorer leur position). C'est celle qui est donnée par la perspective de la santé mentale @math_disaster_2015
+ * la seconde est celle d'un cycle émotionnel qui après la stupeur encourage l'héroisme, auxquel la désillusion succède, jusqu'à retrouver un état apaisé qui correspond à une socité stabilisée et confiante dans son futur (autrement dit sure des évolutions qu'elle va subir, et en moyenne confiante dans ce que cette évolution va améliorer leur position). C'est celle qui est donnée par la perspective de la santé mentale( @math_disaster_2015 ) 
 
-![ @math_disaster_2015](IndianJPsycholMed_2015_37.jpg)
+![Figure 1 :cycle de vie de la santé morale](IndianJPsycholMed_2015_37.jpg){ width=65% }
  
-Nous sommes dans ce désastre et l'expérience vécue par tous est celle du confinement, même si pour chacun elles se traduit par des contraintes fort distinctes : quand certains se sont réfugié dans leur résidence secondaire, d'autres sont cloués dans de petits appartements. Une recommandation devenue obligation à rester chez soi, un dispositif réglementaire qui contrôle, nudge et sanctionne, une privation, espérons temporaire, de liberté de déplacement. Une vie sociale limitée au foyer et aux moyens de communiquer qui se sont multipliés. Aux whatsapps, snpa, messenger, s'ajoutent zoom ou teams . 
+Nous sommes dans ce désastre et l'expérience vécue par tous est celle du confinement, même si pour chacun elle se traduit par des contraintes fort distinctes : quand certains se sont réfugiés dans leur résidence secondaire, d'autres sont cloués dans de petits appartements et des ressources inégales.  La contrainte domine par une injonction à rester chez soi, un dispositif réglementaire qui contrôle, nudge et sanctionne, une privation, espérons temporaire, de liberté de déplacement. Une vie sociale limitée au foyer et aux moyens de communiquer qui se sont multipliés. Aux Whatsapps, Snap, Messenger, s'ajoutent Zoom ou Teams. Un désastre confortable si les conditions sociales ne faisaient que ceux qui sont exposés aux contraintes les plus fortes ( l'obligation de travail in situ) sont aussi ceux qui ont les ressources les plus faibles ( résidences de banlieues). 
  
-Les mots sont importants, autant que l'expérience qui s'y traduit. Les mots du confinement sont bien rendus par [autourdumot](http://autourdumot.fr/fr.V.confiner), et il est utile d'en revenir à sa [définition](http://autourdumot.fr/fr.V.confiner).
+Les mots sont importants, autant que l'expérience qui s'y traduit. Les mots du confinement sont bien rendus par [autourdumot](http://autourdumot.fr/fr.V.confiner), et il est utile d'en revenir à sa [définition](http://autourdumot.fr/fr.V.confiner). Mais nous aurons à revenir sur ce qui est dans cette littérature du désastre une question lancinante : crise, désastre, catastrophe ? s'agit-il de concept différents ? lequel est_il le plus adéquat à la situation?
 
-Sur le plan empirique, un des réseaux où les états d'âmes peuvent s'exprimer librement est naturellement Twitter. Très rapidement a émergé un hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours et qui jusqu'au jour 23 émerge en trending topic. Il cristalise les intentions de dire son expérience et de partager ses états d'âmes. L'humour y a une place importante. C'est ce canal que nous allons utiliser pour tester la sensibilité des instruments de mesure du sentiment, et, espérons, mieux comprendre la réaction des populations à un choc  anthropologique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de bouche en bouche et se déplace en business class).
+Sur le plan empirique, un des réseaux où les états d'âmes peuvent s'exprimer librement est naturellement Twitter. Très rapidement a émergé un hashtag #confinementjour1 puis 2 et 3 ( nous en somme à 40), et voué à de longs jours et qui jusqu'à ce jour émerge en trending topic. Il cristallise les intentions d'exprimer sa propre expérience et de partager ses états d'âmes, mais aussi les discours militants qui veulent y accrocher leurs mantras. L'humour y a une place importante, la catharsis est sans doute un moteur. Ce que l'on traite est un flux, le flux du discours socialisés par les plateformes. Dans aucun cas elle ne reflête une opinion insaisissable car elle ne s'exprime pas même forcée par les études d'opinions, elle reflète la production et la répétition du discours de ceux qui s'engage, le paysage discursif auquel sont soumises des populations bien plus larges que celles qui participent à sa composition.Un tweet pour 5 retweets.
 
-Pour les données factuelles, le dashboard de la [John Hopskins University](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) restera un cas d'école en matière d'open dat , l'initiative du geg au travers de son site [le grand continent](https://legrandcontinent.eu/fr/observatoire-coronavirus/) est similaire et remarquable. Ils sont notre inspiration pour un processus qui vise à intégrer la collecte, le traitement et la repropagation des données. 
+C'est ce canal que nous allons utiliser pour tester la sensibilité des instruments de mesure du sentiment, et, espérons, mieux comprendre la réaction des populations à un désastre, un choc anthropologique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de bouche en bouche et se déplace en business class).
 
-Nous nous intéresserons moins au virus et à la maladie, moins au choc économique et social que le confinement va produire, qu'à la manière dont les gens vivent ce choc jour après jour, en capturant l'écume sociale de leur expérience et en tentant d'y mesurer les sentiments, les émotions et les préoccupations et leur variations au cours des jours. Pour nous repérer, un [calendrier des évenements](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing)
+## Les données du covid19 et du confinement
 
-On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé.
+Pour les données factuelles, le dashboard de la [John Hopskins University](https://gisanddata.maps.arcgis.com/apps/opsdashboard/index.html#/bda7594740fd40299423467b48e9ecf6) restera un cas d'école en matière d'open dat , l'initiative du geg au travers de son site [le grand continent](https://legrandcontinent.eu/fr/observatoire-coronavirus/) est similaire et remarquable. Ils sont notre inspiration pour un processus qui vise à intégrer la collecte, le traitement et la repropagation des données. Les historiens sont actifs, appelent à la constitution d'archives de l'immédiat. D'autres sets de données sont disponibles et s'il ne fallait donner qu'une source, la page maintenue par [frédéric clavert](https://histnum.hypotheses.org/3274) est précieuse.
 
-Les liens vers les différentes facettes de l'étude de ce corpus sont donnés ci-dessous.
+Nous nous intéressons moins au virus et à la maladie (saisie par le #covid19 et ses voisins), moins au choc économique et social que le confinement va produire, qu'à la manière dont les gens vivent ce choc jour après jour, en capturant l'écume sociale de leur expérience et en tentant d'y mesurer les sentiments, les émotions et les préoccupations et leur variations au cours des jours. Pour nous repérer, une [frise des évenements](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing) est en cours d'élaboration.
 
-  * [Introduction au projet](https://benaventc.github.io/BarometreConfinement/LdC1_introduction_V01_bc.html)
-  * [Analyse descriptive]()
-  * [Evolution des indicateurs de sentiment](https://benaventc.github.io/BarometreConfinement/LdC3_analyse_V01_bc.html)
-  * Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html)
-  * [Analyse des emos](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)
- 
- ## Références
+On va lancer nos filets de pêche dans ce petit courant, chaque jour,  en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé. Un des objectifs sera de produire un corpus annoté mis à disposition en open access pour les chercheurs qui considérerait que c'est un bon terrain pour tester leur hypothèses. Le processus suivant est résumé dans la figure suivante :
+
+!Figure 2 Processus de collecte et de traitement du corpus](process.jpg){ width=70% }
+
+
+## Les analyses
+
+Les liens vers les différentes facettes de l'étude de ce corpus sont donnés ci-dessous. Ils correspondent aux différents projets de l'équipe et aux script d'analyse qui ont été produits.
+
+ * Une première présentation de [premiers résultats](https://docs.google.com/presentation/d/14QFSAEMlOhtOcr_3D33D7yJVETeMvV1rtnJTSY1k1AI/edit?usp=sharing)
+ * Construire une [frise chronologique des évenements](https://docs.google.com/spreadsheets/d/1PQQzlgOht7NA8YWfwF7zyGWdI0zTFzJaRMXSE0h6vvo/edit?usp=sharing).
+ * La procédure d'[extraction des tweets](https://benaventc.github.io/BarometreConfinement/LdC1_extract_V01_bc) et [celle d'annotation](https://benaventc.github.io/BarometreConfinement/LdC2_annotation_V01_bc)
+ * La convergence des [annotateurs : nrc, Lsd fr, Liwc](https://benaventc.github.io/BarometreConfinement/LdC3_fiability_sentiment_V01_bc.html)
+ * [Le traitement des emojis](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html)-  [Sophie Balech]
+ * Des réseaux sémantiques : [celui des #, des @ et des emos](https://benaventc.github.io/BarometreConfinement/LdC3_planetarium_V01_sb.html)
+ * L'analyse des auto-corrélations et corrélations croisées (ts). Nous avons besoin d'un économètre. L'impact des "news" sur le sentiment. Un exemple avec le [discours du 13 avril](https://benaventc.github.io/BarometreConfinement/LdC3_effetmacron_V01_bc.html))
+ * L'analyse par [profils d'utisateurs](https://benaventc.github.io/BarometreConfinement/LdC3_elementary_V01_bc.html) (induction du genre, fréquence de post, nb de followers). c'est en cours
+ * Approche par LDA (Julien Monnot)
+ * [Vectorisation du corpus](https://benaventc.github.io/BarometreConfinement/LdC2_vector_V1_Valentin.html) (pour créer des lexiques avec word2vec) - [Valentin Mesa]
+ * Analyse des images (Julien Cloarec - Toulouse et Mehdi Elmoukhliss)
+ * dashboard : avec [flexdashboard](https://rmarkdown.rstudio.com/flexdashboard/): [version mini](https://rpubs.com/calciu/602700) avec graphiques interactifs [version maxi](https://rpubs.com/calciu/602943)
+ * Parallélisation des calculs sur le cluster de l'([Université de Lille](http://hpc.univ-lille.fr/cluster-hpc-htc)) by Michel Calciu. ( gain : de 8h de calcul pour l'annotation à 8mn). le [code est ici](https://benaventc.github.io/BarometreConfinement/LdC2_annotationParallele_V01_cm.html) 
+ * La dimension spatiale via la geolocalisation des tweets est une néçessité, nous n'avons pas de spécialiste encore. 
+  
+## Références

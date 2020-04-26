@@ -1,0 +1,569 @@
+---
+title: "Confinement_LDA"
+author: "Julien Monnot"
+date: "23 avril 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidytext)
+library(tm)
+library(tidyverse)
+library(tidygraph)
+library(tidyr)
+library(tidyselect)
+library(dplyr)
+library(ggplot2)
+library(proustr)
+library(mixr)
+library(widyr)
+library(knitr)
+library(topicmodels)
+library(lubridate)
+memory.limit()
+memory.limit(33000)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+
+#Déclaration de la palette en hexa
+palz<-c("#3B9AB2", "#EBCC2A" , "#F8AFA8" , "#C25B56", "#0B775E", "#BEB9B5","#35274A","#FEE1AE",
+         "#F2AD00" ,"#F98400","#F5CDB6" ,"#FF0000", "#9A8822","#00A08A","#046C9A","#74828F")
+########################################################################################################################################################################################################################################################
+
+#On charge la base nécessaire au traitement
+df <- readRDS("D:/__Thèse/_Confinement/df_nrcliwclsd.rds")
+########################################################################################################################################################################################################################################################
+
+#On peut donc maintenant s'occuper du traitement des dates  
+df$created_at <-  ceiling_date(df$created_at, unit = "week")
+
+#On crée une nouvelle colonne dans la base correspondant à la semaine de 2020 d'émission des Tweets
+df <- df %>%
+  arrange(created_at) %>%
+  mutate(SemainN = week(created_at))
+
+#On redéfinit les valeurs obtenues en factor pour garder les valeurs accessibles facilement pour filtrage du corpus
+df$SemainN <- as.factor(df$SemainN)
+VecDate <- levels(df$SemainN)
+VecDate
+########################################################################################################################################################################################################################################################
+
+#Tokenisation du corpus
+df_tok <- df %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+########################################################################################################################################################################################################################################################
+
+#On associe le lexique qui va nous permettre l'annotation des catégories grammaticales des mots du corpus de Tweets
+lex_lm <- get_lexicon("fr")
+########################################################################################################################################################################################################################################################
+```
+
+
+```{r Model Gen}
+#On associe à la base les lemmes reconnus par le lexique
+df_tok <- left_join(df_tok,
+                    lex_lm,
+                    by=c("Mots"="word"))
+############################################################################################################################
+#                                                   DEBUT DE TRAITEMENT                                                    #
+############################################################################################################################
+
+#On crée un sous ensemble de donnée, on filtre le résultat sur les noms/adjectifs reconnus et l'on supprime les mots inutiles
+df_tok_fltr <- df_tok %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1 <- df_tok_fltr %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+
+#On calcule les frequences afin de voir les mots les plus utilisés par les twittos
+frq <- df_tok_fltr1 %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+
+#On filtre les fréquences risquant de saturer le graphique (Confinement + jours)
+frq <- frq %>%
+  filter(freq < 12000)
+
+#On visualise le résultat
+ggplot2::ggplot(dplyr::filter(frq,freq>2800),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+
+#On calcule les coocurrences des termes afin de voir avec lesquels ces derniers s'associent le plus
+cooc <- df_tok_fltr1 %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+#On filtre les coocurrences afin de n'obtenir que les plus répétées.
+cooc2 <- cooc %>%
+  filter(n > 600)
+
+#On construit le grapphique en structurant les fréquences recencées en tableau de données
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+#On définit le graphique
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+#On visualise le résultat sous forme de réseau
+plot(my_graph)
+############################################################################################################################
+#                                                   FIN DE TRAITEMENT                                                     #
+############################################################################################################################
+
+
+```
+Ici le paragraphe de code qui sur l'ensemble du corpus n'est pas possible sur ma machine. Il est néanmoins effectué sur les 5 semaines.
+########################################################################################################################################################################################################################################################
+
+dtm <- df_tok_fltr1 %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+lda_glob <- LDA(x = dtm, k = 12, control = list(seed=96))  
+
+
+tidy_Lda_GlobB <- tidy(lda_glob, matrix= "beta")
+
+
+tidy_Lda_GlobB %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques")
+
+########################################################################################################################################################################################################################################################
+
+```{r Sem1-12}
+#On filtre la base afin de lui faire correspondre la semaine souhaitée
+
+df_Sem <- df %>%
+  filter(SemainN == "12")
+
+########################################################################################################################################################################################################################################################
+
+#On retokenise le corpus selon la semaine identifiée ==> Traintement
+df_tok_Sem <- df_Sem %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_tok_Sem <- left_join(df_tok_Sem,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_tok_fltr_Sem <- df_tok_Sem %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1_Sem <- df_tok_fltr_Sem %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+frq <- df_tok_fltr1_Sem %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+  head(frq)
+
+frq <- frq %>%
+  filter(freq < 12000)
+
+cooc <- df_tok_fltr1_Sem %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+
+ggplot2::ggplot(dplyr::filter(frq,freq>550),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+cooc2 <- cooc %>%
+  filter(n > 75)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+plot(my_graph)
+
+dtm_Sem <- df_tok_fltr1_Sem %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+
+lda_Sem <- LDA(x = dtm_Sem, k = 12, control = list(seed=2020))  
+
+tidy_Lda_Sem <- tidy(lda_Sem, matrix= "beta")
+
+tidy_Lda_Sem %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques / 1ère semaine")
+
+
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+
+```{r Sem2-13}
+
+#On filtre la base afin de lui faire correspondre la semaine souhaitée
+
+df_Sem <- df %>%
+  filter(SemainN == "13")
+
+########################################################################################################################################################################################################################################################
+
+#On retokenise le corpus selon la semaine identifiée ==> Traintement
+df_tok_Sem <- df_Sem %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_tok_Sem <- left_join(df_tok_Sem,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_tok_fltr_Sem <- df_tok_Sem %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1_Sem <- df_tok_fltr_Sem %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+frq <- df_tok_fltr1_Sem %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+  head(frq)
+
+frq <- frq %>%
+  filter(freq < 12000)
+
+cooc <- df_tok_fltr1_Sem %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+
+ggplot2::ggplot(dplyr::filter(frq,freq>825),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+cooc2 <- cooc %>%
+  filter(n > 135)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+plot(my_graph)
+
+dtm_Sem <- df_tok_fltr1_Sem %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+
+lda_Sem <- LDA(x = dtm_Sem, k = 12, control = list(seed=2020))  
+
+tidy_Lda_Sem <- tidy(lda_Sem, matrix= "beta")
+
+tidy_Lda_Sem %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques / 2ème semaine")
+
+
+```
+
+```{r Sem3-14}
+#On filtre la base afin de lui faire correspondre la semaine souhaitée
+
+df_Sem <- df %>%
+  filter(SemainN == "14")
+
+########################################################################################################################################################################################################################################################
+
+#On retokenise le corpus selon la semaine identifiée ==> Traintement
+df_tok_Sem <- df_Sem %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_tok_Sem <- left_join(df_tok_Sem,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_tok_fltr_Sem <- df_tok_Sem %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1_Sem <- df_tok_fltr_Sem %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+frq <- df_tok_fltr1_Sem %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+  head(frq)
+
+frq <- frq %>%
+  filter(freq < 12000)
+
+cooc <- df_tok_fltr1_Sem %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+
+ggplot2::ggplot(dplyr::filter(frq,freq>550),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+cooc2 <- cooc %>%
+  filter(n > 100)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+plot(my_graph)
+
+dtm_Sem <- df_tok_fltr1_Sem %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+
+lda_Sem <- LDA(x = dtm_Sem, k = 12, control = list(seed=2020))  
+
+tidy_Lda_Sem <- tidy(lda_Sem, matrix= "beta")
+
+tidy_Lda_Sem %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques / 3ème semaine")
+
+
+```
+
+```{r Sem4-15}
+
+#On filtre la base afin de lui faire correspondre la semaine souhaitée
+
+df_Sem <- df %>%
+  filter(SemainN == "15")
+
+########################################################################################################################################################################################################################################################
+
+#On retokenise le corpus selon la semaine identifiée ==> Traintement
+df_tok_Sem <- df_Sem %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_tok_Sem <- left_join(df_tok_Sem,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_tok_fltr_Sem <- df_tok_Sem %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1_Sem <- df_tok_fltr_Sem %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+frq <- df_tok_fltr1_Sem %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+  head(frq)
+
+frq <- frq %>%
+  filter(freq < 12000)
+
+cooc <- df_tok_fltr1_Sem %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+
+ggplot2::ggplot(dplyr::filter(frq,freq>500),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+cooc2 <- cooc %>%
+  filter(n > 80)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+plot(my_graph)
+
+dtm_Sem <- df_tok_fltr1_Sem %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+
+lda_Sem <- LDA(x = dtm_Sem, k = 12, control = list(seed=2020))  
+
+tidy_Lda_Sem <- tidy(lda_Sem, matrix= "beta")
+
+tidy_Lda_Sem %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques / 4ème semaine")
+
+
+```
+
+```{r Sem5-16}
+
+#On filtre la base afin de lui faire correspondre la semaine souhaitée
+
+df_Sem <- df %>%
+  filter(SemainN == "16")
+
+########################################################################################################################################################################################################################################################
+
+#On retokenise le corpus selon la semaine identifiée ==> Traintement
+df_tok_Sem <- df_Sem %>%
+  unnest_tokens(output = "Mots",
+                input = text,
+                token = "words",
+                collapse = F) %>%
+  anti_join(proust_stopwords(),by=c("Mots"="word"))
+
+df_tok_Sem <- left_join(df_tok_Sem,
+                    lex_lm,
+                    by=c("Mots"="word"))
+
+df_tok_fltr_Sem <- df_tok_Sem %>%
+  select(user_id,Mots,lemma,type) %>%
+  filter(type %in% c("nom","adj")) %>% 
+  filter(Mots != "confinement") %>%
+  filter(Mots != "jour")
+
+df_tok_fltr1_Sem <- df_tok_fltr_Sem %>%
+  filter(Mots != c("confinement","jour")) %>%
+  filter(lemma!= c("confinement","jour"))
+
+frq <- df_tok_fltr1_Sem %>%
+  group_by(lemma) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+  head(frq)
+
+frq <- frq %>%
+  filter(freq < 12000)
+
+cooc <- df_tok_fltr1_Sem %>%
+  pairwise_count(lemma, feature = user_id,sort=T) 
+
+
+ggplot2::ggplot(dplyr::filter(frq,freq>300),
+                ggplot2::aes(x=forcats::fct_reorder(lemma,freq), y=freq)) +
+  ggplot2::geom_bar(stat="identity", fill="skyblue")+
+  ggplot2::coord_flip()
+
+cooc2 <- cooc %>%
+  filter(n > 60)
+
+mots_graph <- igraph::graph_from_data_frame(cooc2)
+
+my_graph <- mots_graph %>%
+   ggraph::ggraph(layout = "fr") +
+   ggraph::geom_edge_link(edge_colour="steelblue") +
+   ggraph::geom_node_point(color = "khaki1", size = 5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggplot2::theme_void()
+
+plot(my_graph)
+
+dtm_Sem <- df_tok_fltr1_Sem %>%
+  count(user_id, lemma, sort = TRUE) %>%
+  cast_dtm(user_id, term = lemma, value = n)
+
+
+lda_Sem <- LDA(x = dtm_Sem, k = 12, control = list(seed=2020))  
+
+tidy_Lda_Sem <- tidy(lda_Sem, matrix= "beta")
+
+tidy_Lda_Sem %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta) %>%
+  ggplot(aes(reorder(term,beta),beta, fill= factor(topic))) + geom_col(show.legend = F) + facet_wrap(~ topic, scales = "free") + scale_fill_viridis_d() + coord_flip() + labs(x="Topic",y="Score beta",title = "Modèle à 12 thématiques / 5ème semaine")
+
+
+```

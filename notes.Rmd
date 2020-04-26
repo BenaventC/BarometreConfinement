@@ -1,0 +1,58 @@
+---
+title: "notes"
+author: "CB"
+date: "27 mars 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Litterature
+
+différentes inititives sont lancée pour apprécier le bien être et le consommation, l'humeur des français, 
+
+la question des corpus est posée : témoignage des français dans les journaux . Exemple du monde.
+
+Il y a quelques texte plus fondamentaux. Par exemple : 
+
+
+## les modèles théoriques
+
+une littérature des catastrophes?
+
+d'abord l'histoire puisqu'on qu'on se rapportent aux pestes et à la grippe espagnole. retrouver des sources aux colonies qui ont du triompher du cholera et
+
+
+l'habituation
+
+la littératur de science fiction que les médias culturel remettent en selles . 
+
+En roman 
+la peste de Camus.
+au temps du choléra
+En cinema il y a le succcès populaire "contagion".
+
+## les enseignements de l'épidémiologie et les politiques publiques
+les institutions de l'épidémiologie
+
+pasteur - ebola - sida - malaria - sras
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

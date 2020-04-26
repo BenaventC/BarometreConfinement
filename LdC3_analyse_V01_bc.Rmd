@@ -67,7 +67,7 @@ IMPORTANT : on exclue les retweets, mais il peut être utile de regarder aussi a
 
 ```{r capt, include=TRUE, echo=FALSE}
 
-df_nrc<-readRDS(file = "df_lsd.rds") 
+df_nrc<-readRDS(file = "df_nrcliwclsd.rds") 
 df_nrc<-df_nrc %>% filter (is_retweet==FALSE) #on exclue les retweets
 
 df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
@@ -214,7 +214,7 @@ sentevol<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%summarise(positive=mean(p
 foo<-sentevol %>% ungroup %>%select(Jour, negative,positive) %>% mutate(negative=-1*negative, sentiment=positive+negative)
 
 library(reshape2)
-foo<-melt(foo, id=c("Jour")) %>%filter(Jour<23)
+foo<-melt(foo, id=c("Jour")) %>%filter(Jour<33)
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
@@ -329,7 +329,7 @@ emoevol<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%
             n=sum(n))
 
 foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy )
-foo<-melt(foo, id=c("Jour")) %>% filter(Jour<23)
+foo<-melt(foo, id=c("Jour")) %>% filter(Jour<33)
 
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable),show.legend = FALSE)+
@@ -374,7 +374,7 @@ Une représentation moins brute peut être fournie. On va recalculer les score d
 ```{r emo02c, include=TRUE, fig.height=8, fig.width=10}
 emocol<-c("red3","orangered1","purple3","royalblue3","chartreuse","olivedrab3","green4","gold") #en respectant des codes mais il faudra adoucir.
 
-foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy ) %>% filter(Jour<23)
+foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy ) %>% filter(Jour<33)
 
 emo<-subset(foo,select=-c(Jour))
 emo$tot<-rowSums(emo, na.rm = FALSE, dims = 1)
@@ -530,7 +530,7 @@ foo<- df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.
 
 
 foo<-foo %>% ungroup %>%select(Jour,ami, famille, humain )
-foo<-melt(foo,id=c("Jour")) %>%filter(Jour<23)
+foo<-melt(foo,id=c("Jour")) %>%filter(Jour<33)
 
 
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
@@ -549,7 +549,7 @@ Cette production primaire doit être comparé à la production de la population 
 
 foo<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
 foo<-foo %>% ungroup %>%select(Jour, mouvement, espace, temps)
-foo<-melt(foo,id="Jour") %>%filter(Jour<23)
+foo<-melt(foo,id="Jour") %>%filter(Jour<33)
 
 emocol<-c("green4","firebrick","royalblue3","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 
@@ -568,7 +568,7 @@ ggplot(foo, aes(x=Jour,y=value,group=variable))+
 foo<- df_nrc%>% group_by(Jour) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
 
 foo<-foo %>% ungroup %>%select(Jour, alimentation,sexualité, santé,corps )
-foo<-melt(foo,id="Jour")%>%filter(Jour<23)
+foo<-melt(foo,id="Jour")%>%filter(Jour<33)
 
 emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 
@@ -687,42 +687,6 @@ g<-ggplot(data = cor3, aes(x=Var1, y=Var2, fill=value)) +
 g
 
 ```
-
-## Animation Jour 
-
-
-```{r}
-library(gganimate)
-library(magick)
-
-### Corrélations entre les domaines de l'expérience et les émotions
-
-dfs<-df_nrc %>% select(negative,anger,disgust, fear, sadness,surprise,anticipation,trust,joy,positive, alimentation,sexualité, santé,corps,ami, famille, humain,Jour)
-dfs <- split(dfs,dfs$Jour)
-cors=NULL
-for(i in 1:length(dfs)){
-  #i=2
-  M1 <- dfs[[i]][1:10]
-  M2 <-  dfs[[i]][10:17]
-  cor3 <- cor(x=M1,y=M2)
-  cor3 <- cbind(reshape2::melt(cor3),Jour=i)
-  cors = rbind(cors,cor3)
-}
-
-g <- cors %>% ggplot(aes(x=Var1, y=Var2, fill=value)) + 
-  geom_tile()+ 
-  labs(title="Corrélations entre les domaines de l'expérience et les émotions",x="Sentiments", y="Domaines")+
-  scale_fill_gradient2(low = "blue", high = "red", mid = "white",midpoint = 0, limit = c(-0.3,0.3), space = "Lab",
-                       name="Pearson\nCorrelation")
-
-a <- g + transition_time(Jour) +
-  labs(title = "Jour: {frame_time}") 
-animate(a,duration = 99, nframes=33) # fixe la durée d'un frame (du jour) à 3 sec
-anim_save("goo.gif", a)
-
-```
-
-![](goo.gif)
 
 
 

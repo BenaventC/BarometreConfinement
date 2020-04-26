@@ -37,7 +37,7 @@ library(gglorenz)
 library(ggridges)
 
 
-df<- readRDS(file = "df_lsd.rds") 
+df<- readRDS(file = "df_nrcliwclsd.rds") 
 
 #construire des dates jour/heures
 df$day<-as.numeric(format(df$created_at, "%d")) # jour
@@ -54,7 +54,7 @@ Et voici une représentation de la distribution journalière de la production de
 
 
 ```{r Senti03}
-
+jour_n<-39
 g001<-ggplot(df,aes(x=Jour))+
   geom_bar(aes(fill=(is_retweet)))+ 
   theme_minimal()+ 
@@ -63,7 +63,7 @@ g001<-ggplot(df,aes(x=Jour))+
 
 #library(ggridges)
 
-foo<-df %>% filter(Jour>1 & Jour<23)
+foo<-df %>% filter(Jour>0 & Jour<jour_n)
 foo$Jour<-as.factor(foo$Jour)
 
 g002<-ggplot(foo,aes(x=hour, y=Jour))+theme_minimal() + 
@@ -153,7 +153,7 @@ En terme de capacité de production, les fidèles qui émettent de 7 à 25 messa
 ```{r quanti03}
 col =c("deepskyblue4","chartreuse3","gold2","firebrick2")
 
-dc<-dc %>% mutate(Twittos=ifelse(nb_dc==1,"Ponctuels", ifelse(nb_dc>1 & nb_dc<7, "Récidivistes", ifelse(nb_dc>6 & nb_dc<26,"Fidèles","superposteurs"))))
+dc<-dc %>% mutate(Twittos=ifelse(nb_dc==1,"Ponctuels", ifelse(nb_dc>1 & nb_dc<8, "Récidivistes", ifelse(nb_dc>7 & nb_dc<31,"Fidèles","superposteurs"))))
 dc$Twittos<- factor(dc$Twittos,ordered=TRUE,levels=c("Ponctuels","Récidivistes","Fidèles","superposteurs"))
 
 g10<-ggplot(dc,aes(x=Twittos,y = ..count.. / sum(..count..),fill=Twittos))+

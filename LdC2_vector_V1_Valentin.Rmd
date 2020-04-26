@@ -48,48 +48,53 @@ Un outil pour constituer des dictionnaires spécifiques. Pour le corpus "Confine
  
 ## Processus de préparation de donnée
 
-La condition est faite pour éviter de refaire les calculs qui sont très longs ( en plusieurs heures)
+La condition est faite pour éviter de refaire les calculs qui sont très longs (plusieurs heures)
 
-On elimine :
+La stratégie est d'annoter les contenu par les part of speach, et de selectionner ce qui est sémantiquement évident : les noms propres, les verbes, les adjectifs. On utilisera tant qu'on peut les lemmes. On travaille sur des lemmes.
 
-On travaille sur des lemmes.
+à réintégrer plus tard. (nettoyage par regex, c'est pas un truc sur lequel on est fort)
+
+cleanText <- function(x) {
+       gsub("(@\\S+)*(#\\S+)*(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)*", "", x)
+  }
+
+  obj['text'] = lapply(obj['text'], cleanText)
+  #on enlève les tweets qui ne contenaient que des emojis, hashtags ou urls.
+  obj = obj[grepl("\\w+",obj$text),]
 
 
-```{r prep}
+```{r prep, warning=TRUE, message=TRUE}
 if (!file.exists("confinement_vec.txt")) {
   #si le fichier n'existe pas, on lit nos données brutes, et on nettoie le corpus des stop words
   cnlp_init_udpipe(model_name = "french")
   #lecture de l'ensemble de nos tweets
-  obj<-readRDS(file = "df_nrcliwc17.rds")
+  obj<-readRDS(file = "df_nrcliwclsd.rds")
   #suppression des emojis, handlers, hashtags et URLs
   
-  cleanText <- function(x) {
-       gsub("(@\\S+)*(#\\S+)*(http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+)*", "", x)
-  }
-  
-  
-  obj['text'] = lapply(obj['text'], cleanText)
-  #on enlève les tweets qui ne contenaient que des emojis, hashtags ou urls.
-  obj = obj[grepl("\\w+",obj$text),]
   #Annotation des tweets afin de pouvoir identifier les stopwords
   Vocab<-cnlp_annotate(obj)
-  write_rds(Vocab,"Vocab_17.rds")
-  Vocab<-readRDS(file = "Vocab_17.rds")
-
+  write_rds(Vocab,"Vocab.rds")
+  
+  #Vocab<-readRDS(file = "Vocab.rds")
+  
   #filtrage sur les stopwords
-  updated_vocab = filter(Vocab$token, !(upos %in% c('ADP','DET','SCONJ', 'PRON', 'NUM')))
-  all_tweets <- paste(updated_vocab['lemma'], sep= " ")
+  foo<-as.data.frame(Vocab[c("token")])
+  ggplot(foo,aes(x=token.upos))+geom_bar()+coord_flip()
+  ggplot(foo,aes(x=token.upos))+geom_bar()+coord_flip()
+
+  updated_vocab <- foo %>% filter(token.upos %in% c('ADV','ADJ','VERB', 'PRON', 'NOUN'))
+  all_tweets <- paste(updated_vocab['token.lemma'], sep= " ")
   write.table(all_tweets, file="tweets.txt")
   #Nettoyage des tweets et identification des n-grammes en vue d'entraîner le modèle
-  prep_word2vec(origin="tweets",destination="confinement_vec.txt",lowercase=T,bundle_ngrams=3)
+  prep_word2vec(origin="tweets.txt",destination="confinement_vec.txt",lowercase=T,bundle_ngrams=3)
 }
-prep_word2vec(origin="tweets.txt",destination="confinement_vec.txt",lowercase=T,bundle_ngrams=3)
 
 #Création et entraînement du modèle vectoriel
 if (!file.exists("confinement_vec_model.bin")) {
-  model = train_word2vec("confinement_vec.txt","confinement_vec.bin",vectors=100
-                         ,threads=4,window=10,iter=5,negative_samples=0)
-} else model = read.vectors("confinement_vec_model.bin")
+  model = train_word2vec("confinement_vec.txt","confinement_vec.bin",vectors=200
+                         ,threads=4,window=8,iter=8,negative_samples=0)
+} 
+else model = read.vectors("confinement_vec_model.bin")
 ```
 
 ## Clustering des termes sur la base des vecteurs
@@ -117,7 +122,7 @@ pour reprendre cet exemple fameux.
 
 ```{r}
 
-foo<-model %>% closest_to(~"malade"+"patient" +"hopital"+"crise",40) # + "crise" + "patients" + "malades"
+foo<-model %>% closest_to(~"malade"+"patient" +"hopital",40) # + "crise" + "patients" + "malades"
 
 foo = foo [-1:-3,]
 foo$Similarity<-foo[,2]
@@ -126,7 +131,7 @@ g1
 ```
 
 ```{r solidarité}
-foo<-model %>% closest_to(~ "lutte"+"solidarit",30)
+foo<-model %>% closest_to(~ "masque"+"geste",40)
 foo = foo [-1:-2,]
 foo$Similarity<-foo[,2]
 g1<-ggplot(foo, aes(x=reorder(word, Similarity),y=Similarity))+geom_point(col="black",size=3)+coord_flip()+theme_minimal()+scale_y_log10()+ggtitle("N-grammes proches de la solidarite")

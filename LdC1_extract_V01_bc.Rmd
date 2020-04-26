@@ -4,7 +4,6 @@ author: "CB"
 date: "12 mars 2020"
 output:
   html_document: default
-  word_document: default
 ---
 ![kelkin](kelkin.png)
 
@@ -46,12 +45,12 @@ ATTENTION : il y a un risque de doublon pour J9.( je dois vérifier). Le jour 15
 
 La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
 
-```{r capt, include=TRUE, eval=FALSE}
+```{r capt, include=TRUE, eval=TRUE,warning =TRUE}
 df_17<-readRDS(file = "df_consoj9.rds")
 
 foo<- df_17 %>% filter(user_id=="1")
 
-x<-c("#ConfinementJour26")
+x<-c("#ConfinementJour37","#ConfinementJour38")
 
 
 for (val in x) {
@@ -61,8 +60,8 @@ foo<-rbind(foo,tweets)
 }
 df<-foo
 
-write_rds(tweets,"df_consoj26.rds")
-#rattapper le j19
+write_rds(df,"df_consoj3738.rds")
+#rattrapper le j19 ?
 df1_8<- readRDS(file = "df_conso.rds") 
 df9<-readRDS(file = "df_consoj9.rds")
 df10<-readRDS(file = "df_consoj10.rds")
@@ -75,7 +74,6 @@ df16<-readRDS(file = "df_consoj16.rds")
 df17<-readRDS(file = "df_consoj17.rds")
 df18<-readRDS(file = "df_consoj18.rds")
 df19b<-readRDS(file = "df_consoj19b.rds")
-
 df1920<-readRDS(file = "df_consoj1920.rds")
 df21<-readRDS(file = "df_consoj21.rds")
 df22<-readRDS(file = "df_consoj22.rds")
@@ -83,13 +81,23 @@ df23<-readRDS(file = "df_consoj23.rds")
 df24<-readRDS(file = "df_consoj24.rds")
 df25<-readRDS(file = "df_consoj25.rds")
 df26<-readRDS(file = "df_consoj26.rds")
+df27<-readRDS(file = "df_consoj27.rds")
+df28<-readRDS(file = "df_consoj2728.rds")
+df29<-readRDS(file = "df_consoj29.rds")
+df30<-readRDS(file = "df_consoj30.rds")
+df31<-readRDS(file = "df_consoj31.rds")
+df32<-readRDS(file = "df_consoj32.rds")
+df33a35<-readRDS(file = "df_consoj33a35.rds")
+df36<-readRDS(file = "df_consoj36.rds")
+df38<-readRDS(file = "df_consoj3738.rds")
 
 
-df_26<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,location ,friends_count ,followers_count,statuses_count ,listed_count ,favourites_count,account_created_at ,verified ,hashtags,mentions_screen_name)
-write_rds(df_26,"df_26.rds")
+df_38<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26,df27,df28,df29,df30,df31,df32,df33a35,df36,df38) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, location,friends_count,followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
+
+write_rds(df_38,"df_38.rds")
 
 #on crée un échantillon 
-sample<-readRDS(file="df_24.rds")
+sample<-readRDS(file="df_38.rds")
 sample<- sample_n(sample,70000)
 write_rds(sample,"df.rds")
 
@@ -99,11 +107,11 @@ write_rds(sample,"df.rds")
 
 On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
 
-```{r desc1}
-df_26<-readRDS(file = "df_26.rds")
+```{r desc2}
+df<-readRDS(file = "df_38.rds")
 
 ## plot time series of tweets
-ts_plot(df_26, "3 hours", color="darkblue") +
+ts_plot(df, "3 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
@@ -114,5 +122,36 @@ ts_plot(df_26, "3 hours", color="darkblue") +
   )+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 ```
 
+ en distinguant tweets et rt.
+ 
+```{r desc3}
+df %>%
+  dplyr::group_by(is_retweet) %>%
+  ts_plot( "3 hours") +
+  ggplot2::theme_minimal() +
+  ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
+  ggplot2::labs(
+    x = NULL, y = NULL,
+    title = "Fréquence des posts twitters sur #confinementjour",
+    subtitle = "Nombre de tweets par 3 heures",
+    caption = "\nSource: Data collected by #laboratoireduConfinement from Twitter's REST API via rtweet"
+  )+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
+```
 
 
+```{r desc1}
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+#ggplot(df,aes(x=day))+geom_bar()+theme_minimal()
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+#ggplot(df,aes(x=hour))+geom_bar()+theme_minimal()
+df$year<-2020 # heure
+df$day2<-as.factor(df$day)
+
+foo<-df %>% group_by(month,day,hour) %>% mutate(n_rt=ifelse(is_retweet==TRUE,1,0),n_tw=ifelse(is_retweet==TRUE,0,1)) %>%summarise(n_rt=sum(n_rt),n_tw=sum(n_tw)) %>% mutate(rtrt=n_rt/n_tw)
+foo$date<-paste0("2020","-",foo$month,"-",foo$day," ",foo$hour,":00:00")
+foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
+
+ggplot(foo,aes(x = date2,y=rtrt))+geom_line()
+
+```

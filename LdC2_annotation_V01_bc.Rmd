@@ -35,7 +35,7 @@ library(ggridges)
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_26.rds") 
+df<- readRDS(file = "df_38.rds") 
 
 ```
 
@@ -80,7 +80,7 @@ On se concentrera sur les tweets informatifs : les tweets originaux et les quote
 
 Ultérieurement, il sera intéressant de comparer les deux sous corpus. Le premier reflète la production primaire et originale, de ceux assez engagés pour faire l'effort de produire un contenu. Le second reflète la propagation des idées diffusées dans par le premier et les préférences des utilisateurs moins engagés, les "transmetteurs". Ils ont le pouvoir de propager certains contenus audelà de leurs audiences immédiates et peuvent ainsi déformer la distribution des contenus, comme l'écho peut filtrer certains sons.
 
-```{r Senti01, include=FALSE}
+```{r Senti01, include=TRUE}
 #Un contrôle pour les calculs intermédiaires  en échantillonnant.
 
 df<-df %>% filter(is_retweet==FALSE)
@@ -92,8 +92,8 @@ ts_plot(df, "6 hours", color="darkblue") +
   ggplot2::labs(
     x = NULL, y = NULL,
     title = "Fréquence des posts twitters sur #confinementjour",
-    subtitle = "Nombre de tweets par heure",
-    caption = "\nSource: Data collected by Benavent C. from Twitter's REST API via rtweet"
+    subtitle = "Nombre de tweets par 6 heures",
+    caption = "\nSource: Data collected by 'Labo du Confinement' from Twitter's REST API via rtweet"
   )+ scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 
 ```
@@ -101,9 +101,7 @@ ts_plot(df, "6 hours", color="darkblue") +
 
 ## Méthode NRC
 
-
 On utilise le package [`syuzhet`]'(https://cran.r-project.org/web/packages/syuzhet/vignettes/syuzhet-vignette.html). La procédure est simple. On enrichit le fichier de données df de ces nouvelles annotations
-
 
 ```{r Senti01b, eval = FALSE}
 #require(syuzhet)            
@@ -120,7 +118,7 @@ sent<-as.data.frame(my_text_values_french1)
 
 library(kableExtra)
 #extrait du fichier
-kable(head(sent,5))
+#kable(head(sent,5))
 
 #ajout
 df<-cbind(df,sent)
@@ -179,10 +177,9 @@ analyseSentiments <- dfm(df_senti, dictionary = dic_ton)
 
 dfBaseSpecifique=data.frame(analyseSentiments,nb=ntoken(df_senti), id=rownames(df))
 dfBaseSpecifique<-dfBaseSpecifique %>% rename(Pos_lsdfr=POSITIVE, Neg_lsdfr=NEGATIVE)
-df_lsd<-cbind(df,dfBaseSpecifique)
-write_rds(df_lsd, "df_lsd_32.rds")
-
-M<-subset(df_lsd, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
+df_nrcliwclsd<-cbind(df,dfBaseSpecifique)
+write_rds(df_nrcliwclsd,"df_nrcliwclsd.rds")
+M<-subset(df_nrc, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
 M <- cor(M)
 library(corrplot)
 corrplot.mixed(M, order="hclust")
@@ -197,7 +194,7 @@ corrplot.mixed(M, order="hclust")
 
 Si la notion de sentiment se rapporte à l'idée de valence (+/-) et que les instruments diffèrent par leurs dictionnaires, on peut être tenté d'en construire un propre au corpus et à ce que l'on souhaite observer. Mieux on peut généraliser l'idée en abandonnant la valence pour créer des indicateurs plus topicaux ( avec un index absence/présence). 
 
-Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos texte sur la base de la fréquence avec laquelle une liste de mots bien définis apparaissent dans le texte.
+Par exemple puisque la nourriture semble jouer un rôle important dans l'expérience de confinement, on peut annoter nos textes sur la base de la fréquence avec laquelle une liste de mots bien définis (au sens qu'ils permettent de cerner un concept) apparaissent dans le texte.
 
 
 ```{r Senti03, include=TRUE,eval = FALSE}
@@ -239,43 +236,6 @@ Comportement
 ##le traitement des emojis.
 
  c'est une question essentielle mais résolue par [Sophie Balech](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html) .....
- 
- 
-```{r}
-library(tidyverse)
-library(emo)
-library(rvest)
-url <- "http://kt.ijs.si/data/Emoji_sentiment_ranking/index.html"
-
-# Emoji_sentiment_ranking
-emojis_raw <- url %>%
-  read_html() %>%
-  html_table() %>%
-  data.frame() %>%
-  select(-Image.twemoji., -Sentiment.bar.c.i..95..)
-names(emojis_raw) <- c("char", "unicode", "occurrences", "position", "negative", "neutral", "positive", "sentiment_score", "description", "block")
-
-  # isoler et compter les émojis par tweet
-    emos_in_tweets <- df %>%
-     mutate(emoji = emo::ji_extract_all(text)) %>%
-     mutate(nemoji=lapply(emoji, length)) %>%
-    select(user_id, created_at, emoji, nemoji)
-
-  # calculer score sentiment min, moyen et max exprimés par les emojis présets dans un tweet
-    tweet_emoscores <- emos_in_tweets %>%
-    unnest(emoji = c(emoji)) %>%
-    inner_join(emojis_raw, by=c("emoji"="char")) %>%
-    group_by(user_id,created_at) %>% 
-    summarise(min_sentsc = min(sentiment_score),mean_sentsc = mean(sentiment_score), max_sentsc = max(sentiment_score))
-
-emos_in_tweets <- emos_in_tweets   %>% left_join(tweet_emoscores, by=c("user_id" = "user_id", "created_at" = "created_at"))
-    write_rds(emos_in_tweets,"emos_20.rds")
-```
-
-Pour ne pas allourdir le fichier des annotations précedent (nrc et liwc) qui a déjà plus d'une centaine de colonnes on crée un fichier séparé qui peut être collé (verticalement à l'autre par cbind).
-Le fichier des annotations emoji df_emos_xx.rds) en plus des deux premières colonne pivot ("user_id"     "created_at") contient les colonnes:
-emoji (les emojis extraits du tweet), nemoji (nombre d'emoji du tweet), et un résumé des scores de sentiments des emojis d'un tweet avec min_sentsc (le score min des emoji du tweet),  mean_sentsc (le score moyen des emoji du tweet) et max_sentsc (le score max des emoji du tweet)   
-
 
 ## Approche via ML
 
