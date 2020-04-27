@@ -1,0 +1,384 @@
+---
+title: "Les tweets et leurs réseaux"
+author: "SB"
+date: "23/04/2020"
+output: html_document
+---
+
+```{r setup, include=TRUE, warning=FALSE, message=FALSE}
+#knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse) #l'environnement de base : données et visus
+library(igraph) #pour l'analyse de réseau
+library(tidytext) #pour gérer les mots
+library(emo) #pour gérer les émojis
+library(ggplot2) #pour les graphiques
+library(widyr) #pour certaines manipulations
+library(wordcloud) #pour les nuages de mots
+library(threejs) #pour les représentations 3d
+library(htmlwidgets) #pour les fichiers html
+library(readr) #pour les fichiers rds
+library(RColorBrewer) #pour les palettes de couleurs
+```
+
+
+L'objectif de ce document est de montrer la procédure pour transformer un corpus de tweets en différents réseaux : celui des hashtags, celui des mentions et celui des émojis. Le corpus a été créé grâce à rtweet, le traitement des données grâce au tidyverse et la réalisation des réseaux grâce à igraph. La représentation 3D des réseaux a été réalisé grâce au package threejs. Le graphe est enregistré au format html, et est visible dans R mais pas avec knittr.
+
+# Data
+
+Le jeu de données utilisé est une extraction de tweets #confinement réalisé grâce à rtweet, comprenant les variables "status_id", "is_retweet", "text", "hashtags" et "mentions_screen_name".
+
+
+```{r data}
+tweets<-read_rds("df_confinement21042020.rds")
+```
+
+# Hashtags
+
+## Constitution des données
+
+La variable hashtags contient des listes des hashtags mentionnés dans chacun des tweets. La première chose est de transformer les listes en autant de lignes que nécessaire pour ensuite pouvoir manipuler les données.
+
+```{r data_hashtag}
+hash<-tweets%>%
+  filter(is_retweet==F)%>% #on évacue les retweets
+  subset(select=c("status_id","hashtags")) #on ne retient que les variables qui nous intéressent
+hash<-unique(hash) #on supprime les doublons
+
+#on transforme les données en dataframe
+hash_2<-as.data.frame(unlist(hash[["hashtags"]])) 
+foo<- sapply(hash$hashtags, length)
+foo2 <- as.data.frame(rep(hash$status_id, times=foo))
+foo2<-cbind(foo2,hash_2)
+foo2$id<-foo2[,1]
+foo2$hashtag<-foo2[,2]
+foo3<-foo2[,3:4]
+
+#On calcule les fréquences d'apparition des hashtags
+frq <- foo3 %>%
+  group_by(hashtag) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+frq
+
+#On calcule les cooccurrences entre les hashtags
+cooc <- foo3 %>%
+  pairwise_count(hashtag, feature = id,sort=T)
+cooc
+
+```
+
+## Réseau simple
+
+La première représentation que l'on fait est un réseau simple, en deux dimensions. On commence par filtrer les données pour ne pas avoir un graphique illisible, ici on ne retient que les cooccurrences fréquentes. On crée ensuite un fichier vertex pour entrer différentes caractéristiques associés à chaque hashtags, ce qui nous permet de personnaliser la représentation graphique. On crée ensuite le graph et on le représente.
+
+```{r reseau1_hashtag}
+#filtrer les cooccurrences
+cooc2 <- cooc %>%
+  filter(n > 133)
+
+#Pour chaque hashtag, on associe sa fréquence d'apparition dans le corpus
+vertex<-cooc2%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="hashtag"))
+
+#On sépare en 5 groupes selon la fréquence d'apparition, pour associer les couleurs et les tailles
+vertex<-vertex%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.20)), labels=F,include.lowest = T))
+#on crée la palettes
+palette<-tibble(color=brewer.pal(5,"BuPu"), type=c(1,2,3,4,5))
+
+#on joint la palette aux donénes
+vertex<-inner_join(vertex, palette)
+
+#on crée l'objet graph
+hash_graph<-graph_from_data_frame(cooc2, vertices = vertex)
+
+#Représentation graphique
+hash_graph %>%
+  ggraph::ggraph(layout = "fr") +   #forme du graphe
+  ggraph::geom_edge_link(edge_colour="steelblue") + #couleur des liens
+  ggraph::geom_node_point(color = V(hash_graph)$color, size = V(hash_graph)$type) + #couleur et taille des points
+  ggraph::geom_node_text(aes(label = name), repel = TRUE) + #affichage du texte
+  ggplot2::theme_void() #thème vide
+
+```
+
+
+
+## Wordcloud selon la centralité
+
+On fait une représentation des hashtags les plus centraux dans le graphe (les hubs), grâce à un wordcloud.
+
+```{r wc_hashtag}
+p.rank <- sort(betweenness(hash_graph, directed = TRUE), decreasing = TRUE)[-1] #on calcule la centralité
+p.rank <- sqrt(p.rank[p.rank > 0]) #on change d'échelle et on supprime les 0
+#représentation graphique
+par(bg = "black") #option graphique
+wordcloud(names(p.rank), p.rank, colors = c("tomato", "wheat", "lightblue"), 
+          scale = c(3, 0.5), random.color = TRUE, rot.per = 0.5, random.order = F,font = 2, 
+          family = "serif") #le nuage de mots
+```
+
+## Réseau en 3D
+
+On va maintenant représenter notre réseau simple en 3D. L'intérêt est que l'on pourra naviguer dedans pour en percevoir mieux le(s) sens, et que l'on peut afficher plus de relations pour une meilleure perception. On commence à nouveau par créer les fichiers des cooccurrences et des specifications pour les hashtags.
+
+```{r reseau3d_hashtag}
+#on filtre, mais moins
+cooc3 <- cooc %>%
+  filter(n > 33)
+
+#même procédure que précédemment
+vertex<-cooc3%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="hashtag"))
+
+vertex<-vertex%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.20)), labels=F,include.lowest = T),
+                        size=type/10)
+palette<-tibble(color=brewer.pal(5,"BuPu"), type=c(1,2,3,4,5))
+vertex<-inner_join(vertex, palette)
+
+hash_graph<-graph_from_data_frame(cooc2, vertices = vertex)
+
+#on crée l'objet graphe en 3d grâce à threejs
+gjs <- graphjs(hash_graph,layout = layout_with_fr(hash_graph, dim=3), #la forme du graphe, en 3d
+               vertex.color = "lightblue", #la couleur des noeuds
+               vertex.size = V(hash_graph)$size,#la taille des noeuds
+               vertex.shape = "square", #la forme des noeuds
+               edge.color = "grey", #la couleur des liens
+               edge.width = 2, #la taille des liens
+               main="réseau des #", bg="gray10",  #le titre
+               curvature=0.1, attraction=0.9, repulsion=0.8, opacity=0.9)%>% #les paramètres du graphe
+  points3d(vertices(.), color=V(hash_graph)$color, pch=V(hash_graph)$name, size=0.1) #l'affichage des mots associés aux noeuds
+#print(gjs) #l'affichage du graphe mais pas dans un markdown
+saveWidget(gjs, file="Hashtag-Network-gjs3.html") #sauvegarder le graphe en html
+browseURL("Hashtag-Network-gjs3.html") #ouvrir le fichier html
+
+```
+
+## Sans #confinement
+
+On reprend les mêmes procédures que précédemment, mais on enlève la référence au hashtag confinement.
+
+```{r reseau2_hashtag}
+
+
+cooc2bis <- cooc %>%
+  filter(item1!="confinement"&item2!="confinement"&n>51)
+
+vertex2<-cooc2bis%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="hashtag"))
+
+vertex2<-vertex2%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.20)), labels=F,include.lowest = T),
+                        size=type/10)
+palette<-tibble(color=brewer.pal(5,"BuPu"), type=c(1,2,3,4,5))
+vertex2<-inner_join(vertex2, palette)
+
+hash_graph2<-graph_from_data_frame(cooc2bis, vertices = vertex2)
+
+hash_graph2 %>%
+  ggraph::ggraph(layout = "fr") +
+  ggraph::geom_edge_link(edge_colour="steelblue") +
+  ggraph::geom_node_point(color = "khaki1", size = 2) +
+  ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+  ggplot2::theme_void()
+
+
+gjs2 <- graphjs(hash_graph2,layout = layout_with_fr(hash_graph2, dim=3),
+               vertex.color = "lightblue",
+               vertex.size = V(hash_graph2)$size,
+               vertex.shape = "square",
+               edge.color = "grey",
+               edge.width = 2,
+               main="réseau des # sans #confinement", bg="gray10", 
+               curvature=0.1, attraction=0.9, repulsion=0.8, opacity=0.9)%>%
+  points3d(vertices(.), color=V(hash_graph2)$color, pch=V(hash_graph2)$name, size=0.1)
+#print(gjs)
+saveWidget(gjs2, file="Hashtag-Network-gjs4.html")
+browseURL("Hashtag-Network-gjs4.html")
+
+```
+
+
+# Réseau des mentions
+
+On réitère la même procédure, mais sur les mentions cette fois.
+
+```{r data_mention}
+mention<-tweets%>%filter(is_retweet==F)%>%subset(select=c("status_id","mentions_screen_name"))
+mention<-unique(mention)
+
+mention2<-as.data.frame(unlist(mention[["mentions_screen_name"]]))
+foo<- sapply(mention$mentions_screen_name, length)
+foo2 <- as.data.frame(rep(mention$status_id, times=foo))
+foo2<-cbind(foo2,mention2)
+foo2$id<-foo2[,1]
+foo2$mention<-foo2[,2]
+foo3<-foo2[,3:4]
+
+ment<-foo3%>%
+  group_by(id) %>%
+  summarise(catY = toString(mention))
+
+df_tok<-ment%>%unnest_tokens(output = "mention", input=catY)
+
+frq <- df_tok %>%
+  group_by(mention) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+
+cooc <- df_tok %>%
+  pairwise_count(mention, feature = id,sort=T)
+
+```
+
+## Réseau simple
+
+```{r reseau_mention}
+
+cooc2 <- cooc %>%
+  filter(n > 11)
+
+vertex<-cooc2%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="mention"))
+
+vertex<-vertex%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.20)), labels=F,include.lowest = T))
+palette<-tibble(color=brewer.pal(5,"OrRd"), type=c(1,2,3,4,5))
+vertex<-inner_join(vertex, palette)
+
+mention_graph<-graph_from_data_frame(cooc2, vertices = vertex)
+
+
+
+mention_graph %>%
+  ggraph::ggraph(layout = "fr") +
+  ggraph::geom_edge_link(edge_colour="steelblue") +
+  ggraph::geom_node_point(color = V(mention_graph)$color, size = V(mention_graph)$type) +
+  ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+  ggplot2::theme_void()
+
+```
+
+## Wordcloud selon la centralité
+
+```{r wc_mention}
+p.rank <- sort(betweenness(mention_graph, directed = TRUE), decreasing = TRUE)[-1]
+p.rank <- sqrt(p.rank[p.rank > 0])
+par(bg = "black")
+wordcloud(names(p.rank), p.rank, colors = c("tomato", "wheat", "lightblue"), 
+          scale = c(3, 0.5), random.color = TRUE, rot.per = 0.5, random.order = F,font = 2, 
+          family = "serif")
+```
+
+## Réseau en 3D
+
+```{r reseau3d_mention}
+cooc3 <- cooc %>%
+  filter(n > 3)
+
+vertex<-cooc3%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="mention"))
+
+vertex<-vertex%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.20)), labels=F,include.lowest = T),
+                        size=type/10)
+palette<-tibble(color=brewer.pal(5,"OrRd"), type=c(1,2,3,4,5))
+vertex<-inner_join(vertex, palette)
+
+mention_graph<-graph_from_data_frame(cooc3, vertices = vertex)
+
+gjs <- graphjs(mention_graph,layout = layout_with_fr(mention_graph, dim=3),
+               vertex.color = "lightblue",
+               vertex.size = V(mention_graph)$size,
+               vertex.shape = "square",
+               edge.color = "grey",
+               edge.width = 2,
+               main="Réseau des mentions @", bg="gray10", 
+               curvature=0.1, attraction=0.9, repulsion=0.8, opacity=0.9)%>%
+  points3d(vertices(.), color=V(mention_graph)$color, pch=V(mention_graph)$name, size=0.1)
+#print(gjs)
+saveWidget(gjs, file="Mention-Network-gjs3.html")
+browseURL("Mention-Network-gjs3.html")
+
+```
+
+
+# Emojis
+
+Pour finir, on fait la même chose avec les émojis. Pour cela, on commence par les extraires des twwets, grâce au package emo, puis on applique toujours la même procédure.Il faut encore trouver comment insérer de jolies images d'émojis...
+
+```{r data_emo}
+emojis <- tweets %>%
+mutate(emoji = emo::ji_extract_all(text)) %>% #on récupère la liste des émojis pour chaque tweet, c'est un peu long
+select(status_id, emoji)
+
+emojis2<-as.data.frame(unlist(emojis[["emoji"]]))
+foo<- sapply(emojis$emoji, length)
+foo2 <- as.data.frame(rep(emojis$status_id, times=foo))
+foo2<-cbind(foo2,emojis2)
+foo2$id<-foo2[,1]
+foo2$emoji<-foo2[,2]
+foo3<-foo2[,3:4]
+
+frq <- foo3 %>%
+  group_by(emoji) %>%
+  summarise(freq=n()) %>%
+  arrange(desc(freq))
+
+cooc <- foo3 %>%
+  pairwise_count(emoji, feature = id,sort=T)
+
+```
+## Réseau simple
+
+```{r reseau_emo}
+
+cooc2 <- cooc %>%
+  filter(n > 75)
+
+vertex<-cooc2%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="emoji"))
+
+vertex<-vertex%>%mutate(type=cut(freq,quantile(vertex$freq,  probs = seq(0,1, by=0.20)), labels=F,include.lowest = T))
+emo_graph<-graph_from_data_frame(cooc2, vertices = vertex)
+
+
+emo_graph %>%
+  ggraph::ggraph(layout = "fr") +
+  ggraph::geom_edge_link(edge_colour="steelblue") +
+  ggraph::geom_node_point(color="lightblue", size = V(emo_graph)$type) +
+  ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+  ggplot2::theme_void()
+
+```
+
+## Wordcloud selon la centralité
+
+```{r wc_emo}
+p.rank <- sort(betweenness(emo_graph, directed = TRUE), decreasing = TRUE)[-1]
+p.rank <- sqrt(p.rank[p.rank > 0])
+par(bg = "black")
+wordcloud(names(p.rank), p.rank, colors = c("tomato", "wheat", "lightblue"), 
+          scale = c(3, 0.5), random.color = TRUE, rot.per = 0.5, random.order = F,font = 2, 
+          family = "serif")
+```
+
+## Réseau en 3D
+
+```{r reseau3d_emo}
+
+cooc3 <- cooc %>%
+  filter(n > 36)
+
+vertex<-cooc3%>%select(item1)%>%unique()%>% inner_join(frq, by=c("item1"="emoji"))
+
+vertex<-vertex%>%mutate(color=cut(freq,quantile(vertex$freq,  probs = seq(0,        1, by=0.25)), labels=F,include.lowest = T),
+                        size=color/10)
+
+emo_graph<-graph_from_data_frame(cooc3, vertices = vertex)
+
+gjs <- graphjs(emo_graph,layout = layout_with_fr(emo_graph, dim=3),
+               vertex.color = "lightblue",
+               vertex.size = V(emo_graph)$size,
+               vertex.shape = "square",
+               edge.color = "grey",
+               edge.width = 2,
+               main="Réseau des Emojis", bg="gray10", 
+               curvature=0.1, attraction=0.9, repulsion=0.8, opacity=0.9)%>%
+  points3d(vertices(.),  pch=V(emo_graph)$name, size=0.1)
+#print(gjs)
+saveWidget(gjs, file="Emoji-Network3.html")
+browseURL("Emoji-Network3.html")
+
+```
+
