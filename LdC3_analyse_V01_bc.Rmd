@@ -29,7 +29,7 @@ L'approche dans ce script est principalement baromètrique. On cherche simplemen
 
 # Les outils de l'analyse
 
-Le but de l'exercice est de mesurer le sentiment dans la période de confinement décidée par l'Etat pour lutter contre l'épidémie de covid19, au travers des tweets générés avec le hashtag #confinementjourxx qui signale clairement l'intention de partager son sentiment, son humeur, sa pensée, son expérience, ses états d'âme. 
+Le but de l'exercice est de mesurer le sentiment dans la période de confinement décidée par l'Etat pour lutter contre l'épidémie de covid19, au travers des tweets générés avec le hashtag #confinementjourJ qui signale clairement l'intention de partager son sentiment, son humeur, sa pensée, son expérience, ses états d'âme. 
 
 C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. Il s'inscrit dans un projet expressif assez bien identifiable et se révèlent une convention capable de durer quotidiennent dans les trending-topic de twitter.
 
@@ -67,7 +67,7 @@ IMPORTANT : on exclue les retweets, mais il peut être utile de regarder aussi a
 
 ```{r capt, include=TRUE, echo=FALSE}
 
-df_nrc<-readRDS(file = "df_nrcliwclsd.rds") 
+df_nrc<-df_nrcliwclsd_cum44#readRDS(file = "df_nrcliwclsd.rds") 
 df_nrc<-df_nrc %>% filter (is_retweet==FALSE) #on exclue les retweets
 
 df_nrc$day<-as.numeric(format(df_nrc$created_at, "%d")) # jour
@@ -79,6 +79,9 @@ df_nrc$hour<-as.numeric(format(df_nrc$created_at, "%H")) # heure
 
 df_nrc$year<-2020 # heure
 df_nrc$day2<-as.factor(df_nrc$day)
+
+filter<-45 #pour selectionner les jours que l'on représente
+
 
 ```
 
@@ -152,7 +155,7 @@ s_std2<-round(sd(df_nrc$positive),2)
 
 #histogram
 g1<-ggplot(df_nrc, aes(x=negative))+
-  geom_histogram(binwidth=1,fill="red")+
+  geom_histogram(binwidth=1,fill="firebrick")+
   theme_minimal()+ scale_x_reverse()+
   ggplot2::annotate("text", x=7, y=200000, label= paste0("moyenne=",s_mean1," \n ecart type",s_std1))
 
@@ -214,7 +217,7 @@ sentevol<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%summarise(positive=mean(p
 foo<-sentevol %>% ungroup %>%select(Jour, negative,positive) %>% mutate(negative=-1*negative, sentiment=positive+negative)
 
 library(reshape2)
-foo<-melt(foo, id=c("Jour")) %>%filter(Jour<33)
+foo<-melt(foo, id=c("Jour")) %>%filter(Jour<filter)
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable))+
   theme(axis.text.x=element_text(angle = 60, vjust = 0.5))+ 
@@ -329,7 +332,7 @@ emoevol<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%
             n=sum(n))
 
 foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy )
-foo<-melt(foo, id=c("Jour")) %>% filter(Jour<33)
+foo<-melt(foo, id=c("Jour")) %>% filter(Jour<filter)
 
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
   geom_line(size=1,aes(color=variable),show.legend = FALSE)+
@@ -374,7 +377,7 @@ Une représentation moins brute peut être fournie. On va recalculer les score d
 ```{r emo02c, include=TRUE, fig.height=8, fig.width=10}
 emocol<-c("red3","orangered1","purple3","royalblue3","chartreuse","olivedrab3","green4","gold") #en respectant des codes mais il faudra adoucir.
 
-foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy ) %>% filter(Jour<33)
+foo<-emoevol %>% ungroup %>%select(Jour, anger,fear,disgust, sadness ,surprise,anticipation,trust, joy ) %>% filter(Jour<filter)
 
 emo<-subset(foo,select=-c(Jour))
 emo$tot<-rowSums(emo, na.rm = FALSE, dims = 1)
@@ -418,7 +421,7 @@ foo3<-cbind(date,foo3)
 ggplot(foo3, aes(x=Jour,y=tot))+
   geom_line(stat="identity",size=1,show.legend = TRUE,color="gold2")+
   theme_minimal()+theme(axis.text.x = element_text(size=11, angle=45))+
-  labs(title="Intensité des émotions #confinementjour", subtitle="par heure", y="Somme des émotions",x=NULL)+  geom_smooth(method="loess", color="orange3")
+  labs(title="Intensité des émotions #confinementjour", subtitle="par jour", y="Somme des émotions",x=NULL)+  geom_smooth(method="loess", color="orange3")
 
 ```
 
@@ -525,12 +528,11 @@ on y examine
 
 ```{r liwc4a}
 # les proches
-
 foo<- df_nrc %>% group_by(Jour) %>% mutate(n=1) %>%   summarise(ami=mean(ami,na.rm=TRUE),famille=mean(famille,na.rm=TRUE),humain=mean(humain,na.rm=TRUE))
 
 
 foo<-foo %>% ungroup %>%select(Jour,ami, famille, humain )
-foo<-melt(foo,id=c("Jour")) %>%filter(Jour<33)
+foo<-melt(foo,id=c("Jour")) %>%filter(Jour<filter)
 
 
 ggplot(foo, aes(x=Jour,y=value,group=variable))+
@@ -549,7 +551,7 @@ Cette production primaire doit être comparé à la production de la population 
 
 foo<-df_nrc %>% group_by(Jour) %>% mutate(n=1) %>% summarise(sentir=mean(sentir,na.rm=TRUE),voir=mean(voir,na.rm=TRUE),entendre=mean(entendre,na.rm=TRUE),mouvement=mean(corps,na.rm=TRUE),espace=mean(espace,na.rm=TRUE),temps=mean(temps,na.rm=TRUE))
 foo<-foo %>% ungroup %>%select(Jour, mouvement, espace, temps)
-foo<-melt(foo,id="Jour") %>%filter(Jour<33)
+foo<-melt(foo,id="Jour") %>%filter(Jour<filter)
 
 emocol<-c("green4","firebrick","royalblue3","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 
@@ -568,7 +570,7 @@ ggplot(foo, aes(x=Jour,y=value,group=variable))+
 foo<- df_nrc%>% group_by(Jour) %>% mutate(n=1) %>% summarise(alimentation=mean(alimentation,na.rm=TRUE),sexualité=mean(sexualité,na.rm=TRUE),santé=mean(santé,na.rm=TRUE),corps=mean(corps,na.rm=TRUE))
 
 foo<-foo %>% ungroup %>%select(Jour, alimentation,sexualité, santé,corps )
-foo<-melt(foo,id="Jour")%>%filter(Jour<33)
+foo<-melt(foo,id="Jour")%>%filter(Jour<filter)
 
 emocol<-c("green4","red3","royalblue2","orangered1","purple3","chartreuse","olivedrab3","yellow") #en respectant des codes mais il faudra adoucir.
 

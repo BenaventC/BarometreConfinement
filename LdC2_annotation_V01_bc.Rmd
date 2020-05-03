@@ -22,20 +22,21 @@ library(rtweet) #extraction twitter
 library(gridExtra) #associer des ggplot
 library(ggrepel) #pour une belle labelisation des xy
 library(igraph) #pour l'analyse de réseau
-library(wesanderson)
 library(scales) #pour les échelles de temps et de date
 library(syuzhet)     # ncr      
 library(tm)
 library(quanteda) #with quanteda
 library(ggridges)
-
+library(kableExtra)
 
 ```
 
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "df_38.rds") 
+df<- readRDS(file = "DataPrimaires/df_consoj4244.rds") 
+df<-df %>% select(user_id,status_id,created_at,screen_name,text,quoted_text,quoted_status_id,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,  country, country_code, name,location, description, place_name,friends_count, followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
+
 
 ```
 
@@ -86,7 +87,7 @@ Ultérieurement, il sera intéressant de comparer les deux sous corpus. Le premi
 df<-df %>% filter(is_retweet==FALSE)
 
 ## plot time series of tweets
-ts_plot(df, "6 hours", color="darkblue") +
+ts_plot(df, "2 hours", color="darkblue") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
@@ -118,13 +119,13 @@ sent<-as.data.frame(my_text_values_french1)
 
 library(kableExtra)
 #extrait du fichier
-#kable(head(sent,5))
+kable(head(sent,5))
 
 #ajout
 df<-cbind(df,sent)
 
 #on sauvegarde pour réemploi ultérieur
-write_rds(df,"df_nrc.rds")
+write_rds(df,"df_nrc4244.rds")
 ```
 
 Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
@@ -136,7 +137,7 @@ le LIWC dont il existe [deux versions 2007 et 2015](https://liwc.wpengine.com/co
 
 Une partie des 80 indicateurs proposés est relatif à des dimensions topicales dont plusieurs groupes vont retenir notre attention dans la mesure où ils décrivent une partie de l’expérience relatée dans les commentaires. On retrouvera ici les [principales variables](https://www.kovcomp.co.uk/wordstat/LIWC.html) traduction en français voir ref
 
-La procédure pour extraire ces notions est fort simple, analogue à la précédente :
+La procédure pour extraire ces notions est fort simple, analogue à la précédente : on installe le dictionnaire LIWC et on utilise quanteda pour executer l'opération (`liwcalike`)
 
 ```{r liwc01, eval = FALSE}
 # the devtools package needs to be installed for this to work
@@ -149,7 +150,8 @@ test<-liwcalike(df$text,dictionary = dict_liwc_french)
 kable(head(test,5))
 
 df<-cbind(df,test)
-write_rds(df,"df_nrcliwc.rds")
+
+write_rds(df,"df_nrcliwc4244.rds")
 
 ```
 
@@ -177,12 +179,18 @@ analyseSentiments <- dfm(df_senti, dictionary = dic_ton)
 
 dfBaseSpecifique=data.frame(analyseSentiments,nb=ntoken(df_senti), id=rownames(df))
 dfBaseSpecifique<-dfBaseSpecifique %>% rename(Pos_lsdfr=POSITIVE, Neg_lsdfr=NEGATIVE)
-df_nrcliwclsd<-cbind(df,dfBaseSpecifique)
-write_rds(df_nrcliwclsd,"df_nrcliwclsd.rds")
-M<-subset(df_nrc, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
+df_nrcliwclsd4244<-cbind(df,dfBaseSpecifique)
+write_rds(df_nrcliwclsd4244,"df_nrcliwclsd4244.rds")
+M<-subset(df_nrcliwclsd4244, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
 M <- cor(M)
 library(corrplot)
 corrplot.mixed(M, order="hclust")
+
+df_nrcliwclsd<- readRDS(file = "df_nrcliwclsd.rds") 
+df_nrcliwclsd4244<- readRDS(file = "df_nrcliwclsd4244.rds") 
+
+df_nrcliwclsd_cum44 <-rbind(df_nrcliwclsd, df_nrcliwclsd4244)
+
 ```
 
 
@@ -202,13 +210,26 @@ my_text <- df$text
 method <- "custom"
 custom_lexicon <- data.frame(word=c("course", "shopping", "queue", "masque","un mètre",
                                     "distance sociale","commerce","supermarché","superette","marché",
-                                    "faire ses courses", "employé","caissière", "carrefour", "leclerc",
-                                    "Intermarché", "franprix","monoprix" ),
-                             value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
+                                    "faire ses courses", "amazon", "employé","caissière", "carrefour", "leclerc",
+                                    "Intermarché", "franprix","monoprix", "drive","delivery" ),
+                             value=c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
 custom_distrib <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
 
 custom_distrib<-as.data.frame(custom_distrib)
 ggplot(custom_distrib,aes(x=custom_distrib))+geom_histogram()+scale_y_log10()
+
+```
+
+```{r Senti03, include=TRUE,eval = FALSE}
+my_text <- df$text
+method <- "custom"
+custom_lexicon <- data.frame(word=c("sexe", "sexualité", "amour", "rencontre","drague","love"),
+                             value=c(1,1,1,1,1,1))
+custom_distrib <- get_sentiment(my_text, method = method, lexicon = custom_lexicon)
+
+custom_distrib<-as.data.frame(custom_distrib)
+ggplot(custom_distrib,aes(x=custom_distrib))+geom_histogram()+scale_y_log10()
+
 ```
 
 
@@ -219,21 +240,21 @@ Une analyse phénoménologique rapide en fait émerger quelques unes (à augment
 Comportement
  * Travail :le travail qui soit se fait à distance soit dans des conditions de circulations fortement contraintes
  * Education : S'occuper de la vie des enfants : écoles, aération, occupation, disputes....
- * Socialité :Le rapport aux autres des proches éloignés au lointains rapprochés
+ * Socialité : Le rapport aux autres, des proches éloignés aux lointains rapprochés, amis, famille, collègues.
  * Organique : Le soin du corps et la sexualité, l'organique.
  * Logistique : l'approvisionnement et l'alimentation
- * Sécurité : les gestes de protection
+ * Sécurité : les gestes de protection et de distance sociale
  
  Sentiment, émotions et états d'ames
-  * L'inoccupation et l'ennui
- * La spatio-temporalité et la perte des repère ( désorientation)
+ * L'innoccupation et l'ennui
+ * La spatio-temporalité et la perte des repères (désorientation)
  * La catharsis, la distanciation par l'humour et l'irone, la tentation du contrôle par l'information.
  * Les émotions
  
  Cognition
 
  
-##le traitement des emojis.
+## le traitement des emojis.
 
  c'est une question essentielle mais résolue par [Sophie Balech](https://benaventc.github.io/BarometreConfinement/confinement02_emojis.html) .....
 
@@ -242,4 +263,4 @@ Comportement
 mais quelle variable à prédire? l'annotation manuelle est difficile, pas de note associée, seulement des mesures de succès (rt, reply), 
 
 
-##Références :
+## Références :

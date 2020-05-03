@@ -1,57 +1,60 @@
 ---
-title: "Laboratoire du Confinement : extraction des tweets"
-author: "CB"
-date: "12 mars 2020"
+title: "#ConfinementJour56 : a twitter corpus about the french confinement experience"
+author: "SB - MC - CB"
+date: "27 avril 2020"
 output:
   html_document: default
 ---
+[retour au repo](https://github.com/BenaventC/BarometreConfinement)
+
 ![kelkin](kelkin.png)
+
 
 Ce script concerne la première phase de l'analyse, l'extraction des données réalisée avec le package rtweet et l'API rest de twitter dans sa version open.
 
-L'extraction est dirigée par le choix d'une série  hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropocènique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de souffle en souffle et se déplace à travers la planête en businessclass.
+L'extraction est dirigée par le choix d'une série  hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropocènique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de souffle en souffle et se déplace à travers la planête en businessclass et conduisant à clouer au sol la quasi totalité des flottes aériennes. 
 
-Ce hashtag est apparu dans les 26 premiers jours, au moins, en trending topic , il ne reflète pas l'ensemble des réactionq au phénomène du confinement, juste une écume, mais assez commune et conventionnelle pour être digne d'intéret. ( les hashtag comme convent : à développer)
+Ce hashtag est apparu dans les 41 premiers jours en trending topic, s'il ne reflète pas l'ensemble des réactions au phénomène du confinement, juste une écume, il est assez commun et conventionnel pour être digne d'intéret. Une convention est une institution qui s'impose à tous mais qui a des alternatives, et  dont l'origine est inconnue(Favereau). Si l'exemple de la conduite à droite où à gauche est le plus évident, dans notre contexte les hashtag fonctionnent aussi comme des bannières de ralliement, une convention de signalement mais aussi un espace de rassemblement. Leur force conventionnelle peut d'ailleurs s'apprécier par leur stabilité.
+
+Le choix très spécifique de ce hashtag au caractère sériel qui dénote une culture populaire des séries rythmée par des saisons et des épisodes, est justifié par sa signication : le lieu et la bannière de ce que l'on pense, sent et peut être de ce qu'on fait (par définition une expérience) au fil des jours, au rythme quoditien des applaudissements du soir qui suivent le bulletion du DGS. Il permet ainsi de sonder la production de contenus sociaux dans la perspective particulière de l'expérience du confinement, telle qu'on la partage dans les réseaux sociaux. C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. 
+
 
 On va lancer nos filets de pêche dans ce petit courant, en espérant que ce sera un caillou de plus pour retrouver le chemin d'une humanité en bonne santé. La méthode est de recherché le lendemain ( plutôt dans l'après midi) les twet du jour d'avant. On accumule ainsi progressivement les données.
 
 
 
-# Les outils de l'analyse
+## Les outils de l'analyse
 
 Le but de l'exercice est de mesurer le sentiment dans la période covid19 au travers des twits générés avec le hashtag #confinementjourxx qui signale clairement l'intention de donner son sentiment, son humeur, sa pensée, son expérience. 
 
-C'est un fil tenu qui nous semble-t-il significatif, moins au sens de la représentation de l'humeur générale que d'une cohérence éditoriale. 
+L'outil principal est `rtweet`
 
-```{r setup, include=TRUE, echo=TRUE}
+
+```{r setup, include=TRUE, echo=TRUE,message = FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE,include=TRUE, cache=TRUE,  message = FALSE, warning=FALSE)
 library(tidyverse) #l'environnement de base : données et visus
 library(rtweet) #extraction twitter
 library(gridExtra) #associer des ggplot
-library(ggrepel) #pour une belle labelisation des xy
-library(igraph) #pour l'analyse de réseau
-library(wesanderson)
 ```
 
-# La collecte des données
+## La collecte des données
 
 On utilise l'API de twitter via le package [`rtweet`](https://rtweet.info/articles/intro.html) pour aller chercher les tweets contenant le hashtag "confinementjour$" 
 
 Les limites de l'API free de twitter sont de 15000 requêtes par 15mn, on emploie donc le paramètre `retryonratelimit = TRUE` pour poursuivre la requête en supportant la latence. Celà représente facilement quelques heures de requêtage. On sauvegarde donc rapidement le résultat dans un fichier fixe, qu'on pourra rappeler plus tard pour analyse, avec la fonction `write_rds`.
 
-On commence à capturer les données le 9ème jour, puis chaque jour sur le jour de la veille. La convention fixe par sa morphologie un ordre du temps. (regex simple)
-
-ATTENTION : il y a un risque de doublon pour J9.( je dois vérifier). Le jour 15 mérite une attention (unique () traitement)
+On commence à capturer les données le 9ème jour, puis chaque jour sur le jour de la veille pour couvrir la rémanence (les tweets #confinementjourj publié à j+1). La convention fixe par sa morphologie un ordre du temps. En principe on capture l'intégralité du flux.
 
 La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
 
-```{r capt, include=TRUE, eval=TRUE,warning =TRUE}
-df_17<-readRDS(file = "df_consoj9.rds")
 
-foo<- df_17 %>% filter(user_id=="1")
+```{r capt, include=TRUE, eval=FALSE,warning =TRUE, }
+#une boucle quand on a des jours à rattraper!
 
-x<-c("#ConfinementJour37","#ConfinementJour38")
+foo<-readRDS(file = "DataPrimaires/df_consoj9.rds")
+foo<- foo %>% filter(user_id=="1")
 
+x<-c("#ConfinementJour42","#ConfinementJour43","#ConfinementJour44")
 
 for (val in x) {
 tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
@@ -59,47 +62,55 @@ tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
 foo<-rbind(foo,tweets)
 }
 df<-foo
+# les fichiers df_consoj sont les fichiers primaires à archiver
+write_rds(df,"DataPrimaires/df_consoj4244.rds")
+```
 
-write_rds(df,"df_consoj3738.rds")
+La compilation des données a été faite à la main, en fonction des collectes, la séquence reflète son histoire.
+
+```{r capt2, eval=FALSE}
+
 #rattrapper le j19 ?
-df1_8<- readRDS(file = "df_conso.rds") 
-df9<-readRDS(file = "df_consoj9.rds")
-df10<-readRDS(file = "df_consoj10.rds")
-df11<-readRDS(file = "df_consoj11.rds")
-df121314<-readRDS(file = "df_consoj121314.rds")
-df15<-readRDS(file = "df_consoj15.rds")
-df15b<-readRDS(file = "df_consoj15b.rds")
-df15c<-readRDS(file = "df_consoj15c.rds")
-df16<-readRDS(file = "df_consoj16.rds")
-df17<-readRDS(file = "df_consoj17.rds")
-df18<-readRDS(file = "df_consoj18.rds")
-df19b<-readRDS(file = "df_consoj19b.rds")
-df1920<-readRDS(file = "df_consoj1920.rds")
-df21<-readRDS(file = "df_consoj21.rds")
-df22<-readRDS(file = "df_consoj22.rds")
-df23<-readRDS(file = "df_consoj23.rds")
-df24<-readRDS(file = "df_consoj24.rds")
-df25<-readRDS(file = "df_consoj25.rds")
-df26<-readRDS(file = "df_consoj26.rds")
-df27<-readRDS(file = "df_consoj27.rds")
-df28<-readRDS(file = "df_consoj2728.rds")
-df29<-readRDS(file = "df_consoj29.rds")
-df30<-readRDS(file = "df_consoj30.rds")
-df31<-readRDS(file = "df_consoj31.rds")
-df32<-readRDS(file = "df_consoj32.rds")
-df33a35<-readRDS(file = "df_consoj33a35.rds")
-df36<-readRDS(file = "df_consoj36.rds")
-df38<-readRDS(file = "df_consoj3738.rds")
+df1_8<- readRDS(file = "DataPrimaires/df_conso.rds") 
+df9<-readRDS(file = "DataPrimaires/df_consoj9.rds")
+df10<-readRDS(file = "DataPrimaires/df_consoj10.rds")
+df11<-readRDS(file = "DataPrimaires/df_consoj11.rds")
+df121314<-readRDS(file = "DataPrimaires/df_consoj121314.rds")
+df15<-readRDS(file = "DataPrimaires/df_consoj15.rds")
+df15b<-readRDS(file = "DataPrimaires/df_consoj15b.rds")
+df15c<-readRDS(file = "DataPrimaires/df_consoj15c.rds")
+df16<-readRDS(file = "DataPrimaires/df_consoj16.rds")
+df17<-readRDS(file = "DataPrimaires/df_consoj17.rds")
+df18<-readRDS(file = "DataPrimaires/df_consoj18.rds")
+df19b<-readRDS(file = "DataPrimaires/df_consoj19b.rds")
+df1920<-readRDS(file = "DataPrimaires/df_consoj1920.rds")
+df21<-readRDS(file = "DataPrimaires/df_consoj21.rds")
+df22<-readRDS(file = "DataPrimaires/df_consoj22.rds")
+df23<-readRDS(file = "DataPrimaires/df_consoj23.rds")
+df24<-readRDS(file = "DataPrimaires/df_consoj24.rds")
+df25<-readRDS(file = "DataPrimaires/df_consoj25.rds")
+df26<-readRDS(file = "DataPrimaires/df_consoj26.rds")
+df27<-readRDS(file = "DataPrimaires/df_consoj27.rds")
+df28<-readRDS(file = "DataPrimaires/df_consoj2728.rds")
+df29<-readRDS(file = "DataPrimaires/df_consoj29.rds")
+df30<-readRDS(file = "DataPrimaires/df_consoj30.rds")
+df31<-readRDS(file = "DataPrimaires/df_consoj31.rds")
+df32<-readRDS(file = "DataPrimaires/df_consoj32.rds")
+df33a35<-readRDS(file = "DataPrimaires/df_consoj33a35.rds")
+df36<-readRDS(file = "DataPrimaires/df_consoj36.rds")
+df38<-readRDS(file = "DataPrimaires/df_consoj3738.rds")
+df41<-readRDS(file = "DataPrimaires/df_consoj3941.rds")
+df44<-readRDS(file = "DataPrimaires/df_consoj4244.rds")
 
 
-df_38<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26,df27,df28,df29,df30,df31,df32,df33a35,df36,df38) %>% select(user_id,status_id,created_at,screen_name,text,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang, location,friends_count,followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
+df_44<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26,df27,df28,df29,df30,df31,df32,df33a35,df36,df38,df41,df44) %>% select(user_id,status_id,created_at,screen_name,text,quoted_text,quoted_status_id,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,  country, country_code, name,location, description, place_name,friends_count, followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
 
-write_rds(df_38,"df_38.rds")
+write_rds(df_44,"df_44.rds")
 
-#on crée un échantillon 
-sample<-readRDS(file="df_38.rds")
+#on crée un échantillon de travail
+sample<-readRDS(file="df_44.rds")
 sample<- sample_n(sample,70000)
-write_rds(sample,"df.rds")
+write_rds(sample,"df_sample.rds")
 
 ```
 
@@ -107,8 +118,8 @@ write_rds(sample,"df.rds")
 
 On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
 
-```{r desc2}
-df<-readRDS(file = "df_38.rds")
+```{r desc2, fig.width=10}
+df<-readRDS(file = "df_44.rds")
 
 ## plot time series of tweets
 ts_plot(df, "3 hours", color="darkblue") +
@@ -124,10 +135,10 @@ ts_plot(df, "3 hours", color="darkblue") +
 
  en distinguant tweets et rt.
  
-```{r desc3}
+```{r desc3, fig.width=10}
 df %>%
   dplyr::group_by(is_retweet) %>%
-  ts_plot( "3 hours") +
+  ts_plot( "1 hours") +
   ggplot2::theme_minimal() +
   ggplot2::theme(plot.title = ggplot2::element_text(face = "bold")) +
   ggplot2::labs(
@@ -138,8 +149,9 @@ df %>%
   )+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short())
 ```
 
+Ce qui conduit à examiner l'évolution du ratio tweet /retweet au cours du temps. On s'aperçoit que variation forte et ponctuelle, d'un rapport de base de 1 à 5 sont passse à des extrêmes de 1 à 10. Sans doute, mais c'est à vérifier, la conséquence de nouvelles marquantes.
 
-```{r desc1}
+```{r desc1, fig.width=10}
 df$day<-as.numeric(format(df$created_at, "%d")) # jour
 #ggplot(df,aes(x=day))+geom_bar()+theme_minimal()
 df$month<-as.numeric(format(df$created_at, "%m")) # mois
@@ -152,6 +164,11 @@ foo<-df %>% group_by(month,day,hour) %>% mutate(n_rt=ifelse(is_retweet==TRUE,1,0
 foo$date<-paste0("2020","-",foo$month,"-",foo$day," ",foo$hour,":00:00")
 foo$date2 <- as.POSIXct(strptime(foo$date, "%Y-%m-%d %H:%M:%S"))
 
-ggplot(foo,aes(x = date2,y=rtrt))+geom_line()
+ggplot(foo,aes(x = date2,y=rtrt))+geom_line(color="firebrick")+theme_minimal()+labs(
+    x = "Jours", y = "Ratio rt/tweet ( à l'heure)",
+    title = " Evolution du ratio twit/retwet  sur #confinementjour",
+    caption = "\nSource: Data collected by #laboratoireduConfinement from Twitter's REST API via rtweet")+  scale_x_datetime(date_breaks = "1 day", labels = scales::label_date_short()) #+scale_y_log10()
 
 ```
+
+[retour au repo](https://github.com/BenaventC/BarometreConfinement)

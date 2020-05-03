@@ -1,21 +1,20 @@
 ---
-title: "Le réseau des lemmes les plus importants"
+title: "La dynamique du réseau des lemmes les plus fréquents"
 author: "Julien Monnot"
 date: "25 avril 2020"
 output:
-  pdf_document: default
   html_document: default
 ---
+![@richard_tassart](masccatdelivery.jpg)
 
-```{r setup}
+
+script de l'article M&DS, #culture data ["le masque au centre"](https://docs.google.com/document/d/1j-OZ7PYLBsH9SWsURhwAadcfySUzacuOVo64oMn71bw/edit?usp=sharing) à venir en mai 2020.
+
+
+```{r setup, , fig.width=9, cache=TRUE}
 library(tidyverse)
 library(tidytext)
-#library(tm)
 library(tidygraph)
-#library(tidyr)
-#library(tidyselect)
-#library(dplyr)
-#library(ggplot2)
 library(mixr)
 #devtools::install_github("lvaudor/mixr")library(widyr)
 library(knitr)
@@ -25,8 +24,12 @@ library(graphlayouts)
 library(proustr)
 library(widyr)
 library(ggraph)
+memory.limit(size=64000)
+```
+# lecture des données
+```{r data, , fig.width=9, cache=TRUE}
 
-df <- readRDS("dfliwclsd.rds")
+df <- readRDS("df_nrcliwclsd_cum44.rds")
 
 df$day<-as.numeric(format(df$created_at, "%d")) # jour
 df$month<-as.numeric(format(df$created_at, "%m")) # mois
@@ -34,10 +37,13 @@ df$hour<-as.numeric(format(df$created_at, "%H")) # heure
 df$year<-2020 # heure
 
 
-df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month==4,day+15,0) ))
+df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month>3,day+15,0) ))
 
+```
 
+```{r pos, , fig.width=9, cache=TRUE}
 lex_lm <- get_lexicon("fr")
+
 
 df_Tok <- df %>%
   unnest_tokens(output = "Mots",
@@ -54,51 +60,104 @@ df_Tok_Fltr <- df_Tok %>%
   select(user_id,Mots,lemma,type,Jour) %>%
    filter(Mots != "confinement") %>%
   filter(Mots != "jour") %>%
-   filter(type %in% c("nom","adj")) 
+   filter(type %in% c("nom","adj","ver")) 
+
+ggplot(df_Tok,aes(x=type))+geom_bar()+coord_flip()+theme_minimal()
 
 df_Tok_Fltr1 <- df_Tok_Fltr %>%
   filter(Mots != c("confinement","jour")) %>%
   filter(lemma!= c("confinement","jour"))
 
+foo<-df_Tok_Fltr1 %>% mutate(n=1)%>% group_by(lemma) %>% summarise(frequence=sum(n)) %>% top_n(40, frequence)
+
+ggplot(foo, aes(x = reorder(lemma,frequence),y=frequence))+geom_point(stat="identity", color="darkblue")+coord_flip()+theme_minimal()+labs(title="Les 40 lemmes les plus fréquents",y="Lemmes")
+ggsave(paste("lemmes40.jpg"),width=12)
+
+foo<-df_Tok_Fltr1 %>% 
+  mutate(n=1)%>% 
+  group_by(Jour,lemma) %>% 
+  summarise(frequence=sum(n)) %>%
+  ungroup()  %>%
+  group_by(Jour) %>% 
+  arrange(Jour, desc(frequence), lemma) %>% 
+  mutate(ranking = row_number(),
+         Day = Jour) %>% as.data.frame() %>%filter(lemma=="masque"|lemma=="soignant"|lemma=="gouvernement"| lemma=="chloroquine"|lemma=="enfant") %>% filter(Jour<45)
+
+col<-c('orange1','coral2','blue3','lightblue','paleturquoise4','darkcyan')
+ggplot(data = foo, aes(x = Jour, y = ranking, group = lemma)) +
+  geom_line(aes(color = lemma), size =1.2)+
+  theme_minimal()+scale_color_manual(values=col)+scale_y_log10() +labs(title ="Evolution du ranking des lemmes") #scale_y_reverse(breaks = 1:nrow(foo))
+
+
+ggsave(paste("acteurscles.jpg"),width=12)
+
 ```
 
-## R Markdown
+## La boucle pour produire les réseaux quotidiens
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+la boucle du jour1 au journ : 3 opérations
+cooccurences
+fichier network
+representations
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r Cooc1-17}
+```{r Cooc1-17, fig.width=9}
 
 
-for (i in 2:38) {
+for (i in 2:44) {
   
 df_Day <- df_Tok_Fltr1 %>%
-  filter(Jour == 2)
+  filter(Jour == i)
+
+m<-120/log(nrow(df_Day))
+actu<-""
+actu[df_Day$Jour==1]<-"Les mots les plus fréquents - 175 décès" 
+actu[df_Day$Jour==2]<-"Laboratoire du confinement : La scène s'installe" 
+actu[df_Day$Jour==3]<-"L'italie n'arrive pas à endiguer l'épidémie 3000 morts" 
+actu[df_Day$Jour==4]<-"C'est vendredi et le printemps" 
+actu[df_Day$Jour==8]<-"On passe les 1000 morts" 
+actu[df_Day$Jour==11]<-"On prolonge le confinement au 15 avril" 
+actu[df_Day$Jour==17]<-"Les premiers morts des ehpad comptabilisés" 
+actu[df_Day$Jour==18]<-"Vacances des parisiens - bac en tontrôle continu" 
+actu[df_Day$Jour==19]<-"125000 français on été rapatriés" 
+actu[df_Day$Jour==20]<-"30 morts à l'ehpad de Mougins" 
+actu[df_Day$Jour==23]<-"Annonce du discours du président" 
+actu[df_Day$Jour==25]<-"Coronavirus : le porte-avions français CdG, et ses 50 cas attendu à Toulon"
+actu[df_Day$Jour==27]<-"Dimanche de Pâques" 
+actu[df_Day$Jour==28]<-"Le discours du Président : à partir du 11 Mai" 
+actu[df_Day$Jour==29]<-"On passe les 10000 morts à l'hôpital" 
+actu[df_Day$Jour==34]<-"Conférence du 1er ministre" 
+actu[df_Day$Jour==37]<-"Un salarié du privé sur deux est en chomage technique" 
+actu[df_Day$Jour==39]<-"Les décès en hausse de 25% par rapport à 2019 selon l'Insee"
+actu[df_Day$Jour==41]<-"dimanche" 
+actu[df_Day$Jour==43]<-"Plan de déconfinement" 
+actu[df_Day$Jour==44]<-"23376 morts en france dont 9132 en ehpad"
 
 cooc <- df_Day %>%
   pairwise_count(lemma, feature = user_id,sort=T) 
 
 cooc2 <- cooc %>%
-  filter(n > 15)
+  filter(n > m)
 
 mots_graph <- igraph::graph_from_data_frame(cooc2)
 
 my_graph <- mots_graph %>%
    ggraph::ggraph(layout = "fr") +
    ggraph::geom_edge_link(edge_colour="steelblue") +
-   ggraph::geom_node_point(color = "khaki1", size = 5) +
-   ggraph::geom_node_text(aes(label = name), repel = TRUE) +
+   ggraph::geom_node_point(color = "gold3", size = 2.5) +
+   ggraph::geom_node_text(aes(label = name), repel = TRUE, cex=3) +
    ggplot2::theme_void() + 
-   labs(title = paste("Laboratoire du Confinement Jour",i))
+   labs(title = paste("ConfinementJour",i,": ",actu))
 
 plot(my_graph)
-print(my_graph)
 ggsave(paste("Jour",i,".jpg"))
-
 }
-
-
 
 ```
 
+pour les gifs on utilise
+https://gifmaker.me/
+et pour le son
+https://voice2v.com/fr/add-audio-to-video/
+
+
+Les résultats sont [ici sur un air de brel](https://www.youtube.com/watch?v=mTMncSuF_ds) et [là avec Lorenz](https://www.youtube.com/watch?v=VzRmp-9vtZE)
