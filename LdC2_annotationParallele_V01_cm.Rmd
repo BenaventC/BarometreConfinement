@@ -1,0 +1,498 @@
+---
+title: "confinement"
+author: "M. Calciu"
+date: "4/6/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Ce script succède et vient en complément au script `LdC2_annotation_V01_bc.Rmd` qui associe des sentiments (annotations) aux tweets à partir de trois méthodes et/ou dictionnaires NCR, LIWC et LSD. 
+
+Les scripts proposés cherchent à accélérer les calculs d'annotation car ceux-là sont les plus lourds (ils durent plusierus heures) et constituent un goulot d'étranglement à ce stade des analyses. 
+
+Deux pistes sont exploitées:
+
+- 1) calcul parallèle sur un ordinateur de travail (implicit or multicore parallelism)
+- 2) calcul parallèle sur un cluster d’ordinateurs (cluster parallelism)
+
+ 
+## Accélération de calculs d’annotation pour l’association de sentiments aux tweets
+
+### La méthode
+
+Sont développées et actualisées des méthodes de calcul BigData présentées par moi en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que j'ai appelée GeneRal Approach for Parallel Processing Actions ou « GRAPPA » (un clin d'œil  à la boisson qui nous a inspiré là-bas). Les calculs sont accélérés en divisant les données massives (BigData) en segments (chunks) et en les appliquant en parallel sur chaque segment. Pour ce faire sont utilisés les fonctions “Map” et “Reduce” de R sur un ordinateur multicoeur et sur les clusters d'ordinateurs. L'accélération due au calcul parallele est beaucoup plus importante sur le cluster ou chaque machine (noeud) dispose de sa propre mémoire que sur une seule machine ou des multiple coeurs travaillent en parallel en se partageant la même mémoire.
+
+
+### Elements communs aux deux approches (multicore et cluster)
+
+#### Packages communs
+On mobilise les packages necessaires
+
+```{r common-setup, eval=FALSE, include=TRUE}
+library(slurm) # optionnel pour multicore
+library(parallel)
+library(readr)
+library(syuzhet)# ncr
+library(quanteda) #with quanteda
+library("quanteda.dictionaries")
+```
+
+#### READ & UPDATE: données
+Après avoir chargé les tweets collectées, on rajoute quelques variables utiles
+
+```{r common-readupdate, eval=FALSE, include=TRUE}
+df <- readRDS("df.rds")
+# df <- df[sample(round(nrow(df)/1000,0)),] # pour tester localement en miniature ..
+df$day<-as.numeric(format(df$created_at, "%d")) # jour
+df$month<-as.numeric(format(df$created_at, "%m")) # mois
+df$hour<-as.numeric(format(df$created_at, "%H")) # heure
+df$year<-2020 # heure
+df$day2<-as.factor(df$day)
+df$Jour <- 0
+```
+
+#### CHUNK SIZE:
+determination de la taille des segments de tweets pour les splits en fonction de leur nombre et du nombre de noeuds disponibles.
+
+```{r common-chunksz, eval=FALSE, include=TRUE}
+ncores = 4 # ou: detectCores()-1 
+ntweets <- nrow(df)
+fsplit = rep(1:ncores, each=round(ntweets/ncores+.5,0))
+```
+
+
+### Calcul parallèle sur un ordinateur (implicit or multicore parallelism)  --> nrcliwc_grappa.R
+En répartisant les données segmentées (splitées) et leur calcul sur plusieurs coeurs à la fois on arrive a réduire la durée des calculs 2 à 3 fois. Ici on utilise le package R nomé “parallel” (R Core Team, 2020) avec sa fonction de type MAP “mcapply”.
+
+
+#### NRC
+Analyse du sentiment simple (negatif, positif), puis celui des émotions (confiance,peur,surprise,tristesse,dégoût,colère,anticipation,joie)
+##### SPLIT: des données
+On divise  (split ) l’ensemble des tweets  en morceaux (chunks) de taille égale afin de les affecter à chacun des cœurs du processeur de l’ordinateur pour les traiter en parallèle.
+
+```{r ordi-split, eval=FALSE, include=TRUE}
+svtexte=split(as.character(df$text),fsplit[1:ntweets])
+```
+
+##### MAP: mappage parallèle de la fonction qui associe des catégories de sentiments NRC au textes 
+
+La fonction mclapply mappe (affecte) l'annotation des sentiments NRC aux segments (chunks) de tweets produisant comme résultat une liste de tableaux qui contiennent les frequences des catégories de sentiments trouvés dans chaque texte. Dans la liste il y a autant de tableaux qu’il y a de cœurs.  
+Comme c'est ici que se concentre les calculs lourds nous y avons ajouté une fonctionalité (system.time) qui affiche leur durée 
+
+```{r ordi-map, eval=FALSE, include=TRUE}
+print(system.time(
+ resnrc <- mclapply(1:ncores, function(i) get_nrc_sentiment(svtexte[[i]], language="french"))
+))
+```
+
+##### REDUCE: regroupe les resultats de calcul de chaque cœur
+
+L’étape REDUCE regroupe les tableaux d’annotation, produites par chaque coeur et qui se trouvent dans une liste, en un seul tableau en les empilant un sur l’autre ligne par ligne.
+
+```{r ordi-reduce, eval=FALSE, include=TRUE}
+resnrc <- Reduce(rbind, resnrc)
+```
+
+##### SAVE:  
+Augmente le fichier (tableau) de tweets avec les frequences des categories de sentiments issues du calcul MapReduce précedent, en rajoutant 10 colonnes.
+
+```{r ordi-save, eval=FALSE, include=TRUE}
+df_nrcliwc <- cbind(df,resnrc)
+write_rds(df_nrcliwc,"df_nrcliwc.rds")
+```
+#### LIWC
+L'analyse de sentiments est complété par trois groupes de variables (de 80 variables) : celles liées aux proches ( ami, famille, humains), celles liée à la physiologie (alimentation, corps,sexualité,santé ) et enfin celle liée à la dimension saptiotemporelle
+
+```{r ordi-pre2, eval=FALSE, include=TRUE}
+dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
+                               format = "LIWC")
+```
+
+##### SPLIT:
+
+```{r ordi-split2, eval=FALSE, include=TRUE}
+svtexte=split(df$text,fsplit[1:ntweets]) 
+```
+
+##### MAP:
+```{r ordi-map2, eval=FALSE, include=TRUE}
+print(system.time(
+ resliwc <- mclapply(1:ncores, function(i) liwcalike(svtexte[[i]],dictionary = dict_liwc_french))
+))
+```
+
+##### REDUCE:
+
+```{r ordi-reduce2, eval=FALSE, include=TRUE}
+resliwc <- Reduce(rbind, resliwc)
+```
+
+
+##### SAVE:
+
+```{r ordi-save2, eval=FALSE, include=TRUE}
+df_nrcliwc <- cbind(df,resliwc)
+write_rds(df_nrcliwc,"df_nrcliwc.rds")
+```
+
+
+### Calcul parallèle sur un cluster (cluster parallelism)  --> nrcliwc_grappa_slurm.R
+
+En répartisant les calculs sur plusieurs ordinateurs (noeuds) sur un cluster on arrive a réduire substantiellement leur durée (jusqu'à des dizaines de fois). On mobilise ici le package R rslurm  (Marchand & Carroll, 2019) qui soumet des calculs R au gestionnaire de travaux du cluster appelé SLURM (Simple Linux Utility for Resource Management)
+
+Il s'agit du cluster HPC (High Performance Computing) de type grille de calcul du notre méso-centre de l'unversité. Les calculs sur le Cluster s'effectuent par l'intermédiaire d'un gestionnaire de travaux qui s'occupe de gérer la file d'attente et de lancer les calculs lorsque les ressources demandées sont disponibles.
+
+Le gestionnaire de travaux du Cluster est SLURM (Simple Linux Utility for Resource Management).
+
+On mobilise les packages necessaires. S'ajoute ici le package rslurm (voir partie commune)
+
+#### NRC
+
+##### SPLIT des données
+
+Comme la lecture des donnée et leur morcèlement (split) sont rapides, Cette phase reste identique qu'il s’agisse d’un ordinateur ou d’un cluster.
+```{r clust-split, eval=FALSE, include=TRUE}
+svtexte=split(as.character(df$text),fsplit[1:ntweets])
+```
+
+
+##### MAP: mappage parallèle de la fonction d'affectation des sentiments NRC aux textes 
+
+La fonction "slurm_apply" est un genre d'enveloppe pour "mclapply" du package "parallel", elle dispatche les mêmes opérations sur le cluster d'ordinateurs.  L'option submit = FALSE, au lieu de soumettre le job au cluster, enregistre les données et les scripts dans un répertoire pour que job puisse être soumis manuellement par la commade shell "sbatch submit.sh" à partir de ce répertoir. Ainsi on peut préparer la procédure (job) localement sur un ordinateur personnel et la soumettre ultérieurment au cluster.  
+
+
+```{r clust-map, eval=FALSE, include=TRUE}
+sjobnrc <- slurm_apply(function(i) get_nrc_sentiment(svtexte[[i]], language="french") ,
+                       data.frame(i=seq_along(svtexte)),
+                       add_objects = c("get_nrc_sentiment","svtexte"),
+                       jobname = 'nrc_4',
+                       nodes = 4,
+                       cpus_per_node = 2, submit = TRUE)
+
+```
+
+##### REDUCE: regroupe les morceaux
+
+L’étape REDUCE regroupe les résultats du job slurm lancées sur le cluster auparavant
+
+```{r clust-reduce, eval=FALSE, include=TRUE}
+resnrc <- get_slurm_out(sjobnrc, outtype = 'table')
+```
+
+##### SAVE: 
+
+Est identique pour l'ordinateur ou pour le cluster
+
+```{r clust-save, eval=FALSE, include=TRUE}
+df_nrcliwc <- cbind(df,resnrc)
+write_rds(df_nrcliwc,"df_nrcliwc.rds")
+```
+
+#### LIWC
+
+```{r clust-pre2, eval=FALSE, include=TRUE}
+dict_liwc_french <- dictionary(file = "FrenchLIWCDictionary.dic",
+                               format = "LIWC")
+```
+
+
+##### SPLIT:
+```{r clust-split2, eval=FALSE, include=TRUE}
+svtexte=split(df$text,fsplit[1:ntweets]) 
+```
+
+##### MAP:
+```{r clust-map2, eval=FALSE, include=TRUE}
+sjobliwc <- slurm_apply(function(i) liwcalike(svtexte[[i]], dictionary = dict_liwc_french) ,
+                        data.frame(i=seq_along(svtexte)),
+                        add_objects = c("liwcalike","svtexte", "dict_liwc_french"),
+                        jobname = 'liwc_4',
+                        nodes = 4,
+                        cpus_per_node = 2, submit = TRUE)
+
+```
+
+##### REDUCE:
+```{r clust-reduce2, eval=FALSE, include=TRUE}
+resliwc <- get_slurm_out(sjobliwc, outtype = 'table')
+```
+
+##### SAVE:
+
+```{r clust-save2, eval=FALSE, include=TRUE}
+df_nrcliwc <- cbind(df_nrcliwc,resliwc)
+write_rds(df_nrcliwc,"df_nrcliwc.rds")
+```
+
+### Performances obtenue sur les cluster
+Les opérations d'annotation des tweets 1401244 collectés après 20 jours de confinement qui prennent 5 ou 6h peuvent être réduites à 9mn ( sur 32 machines à  2 coeurs), dont 8 min pour l'annotation NRC et moins de 1 min sur LIWC. 
+
+
+
+26355677_0       nrc_32        1        2        4Gn        16?              00:08:13 
+
+26355677_0.+      batch        1        2        4Gn   1126392K   1126392K   00:08:13 
+
+26355677_1       nrc_32        1        2        4Gn        16?              00:08:28 
+
+26355677_1.+      batch        1        2        4Gn   1111044K   1111044K   00:08:28 
+
+26355677_2       nrc_32        1        2        4Gn        16?              00:07:51 
+
+26355677_2.+      batch        1        2        4Gn   1119704K   1119704K   00:07:51 
+
+26355677_3       nrc_32        1        2        4Gn        16?              00:09:50 
+
+26355677_3.+      batch        1        2        4Gn   1128304K    705460K   00:09:50 
+
+26355677_4       nrc_32        1        2        4Gn        16?              00:08:51 
+
+26355677_4.+      batch        1        2        4Gn   1119784K   1119784K   00:08:51 
+
+26355677_5       nrc_32        1        2        4Gn        16?              00:08:37 
+
+26355677_5.+      batch        1        2        4Gn   1127524K   1127524K   00:08:37 
+
+26355677_6       nrc_32        1        2        4Gn        16?              00:08:31 
+
+26355677_6.+      batch        1        2        4Gn   1131588K    715316K   00:08:31 
+
+26355677_7       nrc_32        1        2        4Gn        16?              00:08:38 
+
+26355677_7.+      batch        1        2        4Gn   1123872K   1123872K   00:08:38 
+
+26355677_8       nrc_32        1        2        4Gn        16?              00:08:36 
+
+26355677_8.+      batch        1        2        4Gn   1130848K   1130848K   00:08:36 
+
+26355677_9       nrc_32        1        2        4Gn        16?              00:08:21 
+
+26355677_9.+      batch        1        2        4Gn   1123564K   1123564K   00:08:21 
+
+26355677_10      nrc_32        1        2        4Gn        16?              00:08:41 
+
+26355677_10+      batch        1        2        4Gn   1122848K   1122848K   00:08:41 
+
+26355677_11      nrc_32        1        2        4Gn        16?              00:08:37 
+
+26355677_11+      batch        1        2        4Gn   1139140K   1139140K   00:08:37 
+
+26355677_12      nrc_32        1        2        4Gn        16?              00:08:30 
+
+26355677_12+      batch        1        2        4Gn   1127052K    270628K   00:08:30 
+
+26355677_13      nrc_32        1        2        4Gn        16?              00:08:34 
+
+26355677_13+      batch        1        2        4Gn   1134584K    704616K   00:08:34 
+
+26355677_14      nrc_32        1        2        4Gn        16?              00:09:38 
+
+26355677_14+      batch        1        2        4Gn   1150872K   1150872K   00:09:38 
+
+26355696_15     liwc_32        1        2        4Gn        16?              00:00:51 
+
+26355696_15+      batch        1        2        4Gn   1071108K   1071108K   00:00:51 
+
+26355696_0      liwc_32        1        2        4Gn        16?              00:00:43 
+
+26355696_0.+      batch        1        2        4Gn   1240020K   1240020K   00:00:43 
+
+26355696_1      liwc_32        1        2        4Gn        16?              00:00:51 
+
+26355696_1.+      batch        1        2        4Gn   1142816K   1142816K   00:00:51 
+
+26355696_2      liwc_32        1        2        4Gn        16?              00:01:05 
+
+26355696_2.+      batch        1        2        4Gn   1006808K    916824K   00:01:05 
+
+26355696_3      liwc_32        1        2        4Gn        16?              00:01:03 
+
+26355696_3.+      batch        1        2        4Gn   1100296K    340444K   00:01:03 
+
+26355696_4      liwc_32        1        2        4Gn        16?              00:00:47 
+
+26355696_4.+      batch        1        2        4Gn   1148692K   1148692K   00:00:47 
+
+26355696_5      liwc_32        1        2        4Gn        16?              00:00:50 
+
+26355696_5.+      batch        1        2        4Gn   1111580K   1111580K   00:00:50 
+
+26355696_6      liwc_32        1        2        4Gn        16?              00:00:53 
+
+26355696_6.+      batch        1        2        4Gn   1069416K   1069416K   00:00:53 
+
+26355696_7      liwc_32        1        2        4Gn        16?              00:00:53 
+
+26355696_7.+      batch        1        2        4Gn   1053316K   1053316K   00:00:53 
+
+26355696_8      liwc_32        1        2        4Gn        16?              00:00:57 
+
+26355696_8.+      batch        1        2        4Gn   1036104K   1036104K   00:00:57 
+
+26355696_9      liwc_32        1        2        4Gn        16?              00:00:53 
+
+26355696_9.+      batch        1        2        4Gn   1064304K   1064304K   00:00:53 
+
+26355696_10     liwc_32        1        2        4Gn        16?              00:00:51 
+
+26355696_10+      batch        1        2        4Gn   1076480K   1076480K   00:00:51 
+
+26355696_11     liwc_32        1        2        4Gn        16?              00:00:54 
+
+26355696_11+      batch        1        2        4Gn   1089424K   1089424K   00:00:54 
+
+26355696_12     liwc_32        1        2        4Gn        16?              00:00:53 
+
+26355696_12+      batch        1        2        4Gn   1099464K   1099464K   00:00:53 
+
+26355696_13     liwc_32        1        2        4Gn        16?              00:00:54 
+
+26355696_13+      batch        1        2        4Gn   1093252K   1093252K   00:00:54 
+
+26355696_14     liwc_32        1        2        4Gn        16?              00:00:51 
+
+26355696_14+      batch        1        2        4Gn   1093260K   1093260K   00:00:51 
+
+26355712        liwc_32        1        1        4Gn       836K       836K   00:00:00
+
+
+
+
+
+#### Augmentation des perfomance avec le nombre de coeurs (1,2,4,8,16)
+Sur une version antérieure du fichiers de tweets collectées plus de trois fois plus petite avec 401713 tweets les calcul des annotations NRC sur 1 noeud duraient 1h30. En doublant succéssivement le nombre de noueds on constate clairement la réduction du temps de calcul presque linaire avec l'augmentation du nombre de noeuds
+
+
+Noeuds  Temps
+
+2      40
+
+4      19
+
+8      9
+
+16     4
+
+## Recuperation des annotations et mise à disposition libre pour la recherche
+
+### Recuperation par wget de grands fichies de tweets cumulés jusqu'au jour Y
+Les tweets extraits tous les jours et regroupés de maniere cummulée dans des grands fichiers de plusieurs Go sont téléchargés sur le serveur hpc zeus.univ-lille.fr en quelques minutes en utilisanat la commande linux "wget" en utilisant quelque astuces expliqué à cette adresse https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99
+
+### Sur le serveur adapter et executer les procédures d'annotation *_grappa_slurm.R pour nrcliwc, lsd and emojis sur le fichier courant df_xx.rds file
+- Adapter: Ici il s'agit de passer du fichie df_52.rds au df_55.rds
+```{bash, eval=FALSE}
+sed -i 's/_52.rds/_55.rds/g'  nrcliwc_grappa_slurm.R
+sed -i 's/_52.rds/_55.rds/g'  lsd_grappa_slurm.R
+sed -i 's/_52.rds/_55.rds/g'  emoji_grappa_slurm.R
+```
+
+Obs. Pour le principe du "divide et impera", il serait util de modifier les procédeures *_grappa_slurm.R  pour contenir uniquement les colonnes d'annotations sans aucune colonne en provenance des fichiers des tweets (renoncer au cbind .. final!!)
+Aussi il faudrait avoir une procédure d'annotation distincte pour chaque méthode nrc, liwc, lsd and emoji faire une procédure nrcliwc n'a pas de sens.
+
+- Lancer R CMD BATCH pour générer les jobs slurm  
+
+```{bash, eval=FALSE}
+module load R
+R CMD BATCH nrcliwc_grappa_slurm.R
+R CMD BATCH lsd_grappa_slurm.R
+R CMD BATCH emoji_grappa_slurm.R
+```
+
+verifier de temps en temps l'achevement des jobs en faisant:
+```{bash, eval=FALSE}
+sacct -o jobid,jobname,reqnodes,reqcpus,reqmem,maxrss,averss,elapsed -S 2020-05-11
+sacct -S 2020-05-11
+```
+
+
+###  Adapter et executer la preparation des fichiers d'annotations à mettre en libre service dff_*_Xx.csv
+
+- Adapter: les procédure  *4free.R procedures for nrc, lsd and emojis
+ Ici il s'agit de passer du jour cumulé 52 à 55
+```{bash, eval=FALSE}
+sed -i 's/_52/_55/g'  nrc4free.R
+sed -i 's/_52/_55/g'  lsd4free.R
+sed -i 's/_52/_55/g'  emoji4free.R
+```
+
+
+- Executer 
+```{bash, eval=FALSE}
+R CMD BATCH nrc4free.R
+R CMD BATCH lsd4free.r
+R CMD BATCH emoji4free.r
+```
+
+
+### Evaluer la taille et le nombre de lignes pour les splits des dff_*_55.csv resultants
+
+Il s'agit des fichiers d'annotations qui doivent satisfaire la limite github de 25M
+
+```{bash, eval=FALSE}
+wc -l dff_lsd_55.csv 
+#2598250 dff_nrc_55.csv
+ls -l –-block-size M  dff_*_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 52M 11 mai   12:10 dff_emos_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 36M 11 mai   12:10 dff_lsd_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 50M 11 mai   12:08 dff_nrc_55.csv
+```
+
+Fixer le nombre de tweets per split pour arriver à moins de 25M: si deux -> 1299125; si trois 866083 
+Faire le split et nommer les fichier qui resultent:
+
+```{bash, eval=FALSE}
+split -l 1299125  dff_nrc_55.csv
+mv xaa dff_nrc_55_1.csv
+mv xab dff_nrc_55_2.csv
+split -l 1299125  dff_lsd_55.csv
+mv xaa dff_lsd_55_1.csv
+mv xab dff_lsd_55_2.csv
+split -l 866083  dff_emos_55.csv
+mv xaa dff_emos_55_1.csv
+mv xab dff_emos_55_2.csv
+mv xac dff_emos_55_3.csv
+```
+
+
+
+### Adapter et créer des fichiers "meta-helpers" un pour la colonne lang l'autre pour create_at (posix-date) le denier surtout pour se réperer lors de l'hydratation etc.
+
+
+- Adapter: 
+ Ici il s'agit de passer du jour cumulé 52 à 55
+```{bash, eval=FALSE}
+sed -i 's/_52/_55/g'  maketwdate.R
+sed -i 's/_52/_55/g'  makelang.R
+```
+
+
+- Executer 
+```{bash, eval=FALSE}
+R CMD BATCH maketwdate.R
+R CMD BATCH makelang.R
+```
+
+
+### Récuperer les fichier d'annotations à mettre en libre service sur le repository local
+ 
+```{bash, eval=FALSE}
+cd ~/ cd Documents/Collaborations/christophe/BaromettreCovid19/gits/COVID19-LockdownFr/
+cd LockdownAnnot
+rm * # effacer tous les fichiers anciens
+sftp mihai.calciu@zeus.univ-lille.fr
+cd /workdir/mihai.calciu
+get df_twdate_55.rds 
+mget dff_*_55_?.csv
+```
+
+
+# Mettre à jour le repository sur github
+```{bash, eval=FALSE}
+git status # voir ce qui a changé
+git add # a completer
+```
+
+
