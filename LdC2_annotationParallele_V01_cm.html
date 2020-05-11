@@ -626,19 +626,19 @@ write_rds(df_nrcliwc,&quot;df_nrcliwc.rds&quot;)</code></pre>
 </div>
 <div id="recuperation-des-annotations-et-mise-à-disposition-libre-pour-la-recherche" class="section level2">
 <h2>Recuperation des annotations et mise à disposition libre pour la recherche</h2>
-<div id="recuperation-par-wget-de-grands-fichies-de-tweets-cumulés-jusquau-jour-y" class="section level3">
-<h3>Recuperation par wget de grands fichies de tweets cumulés jusqu’au jour Y</h3>
+<div id="recuperation-par-wget-de-grands-fichiers-de-tweets-cumulés-jusquau-jour-y" class="section level3">
+<h3>Recuperation par wget de grands fichiers de tweets cumulés jusqu’au jour Y</h3>
 <p>Les tweets extraits tous les jours et regroupés de maniere cummulée dans des grands fichiers de plusieurs Go sont téléchargés sur le serveur hpc zeus.univ-lille.fr en quelques minutes en utilisanat la commande linux “wget” en utilisant quelque astuces expliqué à cette adresse <a href="https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99" class="uri">https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99</a></p>
 </div>
 <div id="sur-le-serveur-adapter-et-executer-les-procédures-dannotation-_grappa_slurm.r-pour-nrcliwc-lsd-and-emojis-sur-le-fichier-courant-df_xx.rds-file" class="section level3">
 <h3>Sur le serveur adapter et executer les procédures d’annotation *_grappa_slurm.R pour nrcliwc, lsd and emojis sur le fichier courant df_xx.rds file</h3>
 <ul>
-<li>Adapter: Ici il s’agit de passer du fichie df_52.rds au df_55.rds</li>
+<li>Adapter: Ici il s’agit de passer du fichier df_52.rds au df_55.rds</li>
 </ul>
 <pre class="bash"><code>sed -i &#39;s/_52.rds/_55.rds/g&#39;  nrcliwc_grappa_slurm.R
 sed -i &#39;s/_52.rds/_55.rds/g&#39;  lsd_grappa_slurm.R
 sed -i &#39;s/_52.rds/_55.rds/g&#39;  emoji_grappa_slurm.R</code></pre>
-<p>Obs. Pour le principe du “divide et impera”, il serait util de modifier les procédeures *_grappa_slurm.R pour contenir uniquement les colonnes d’annotations sans aucune colonne en provenance des fichiers des tweets (renoncer au cbind .. final!!) Aussi il faudrait avoir une procédure d’annotation distincte pour chaque méthode nrc, liwc, lsd and emoji faire une procédure nrcliwc n’a pas de sens.</p>
+<p>Obs. Pour le principe du “divide et impera”, il serait util de modifier les procédeures *_grappa_slurm.R pour contenir uniquement les colonnes d’annotations sans aucune colonne en provenance des fichiers des tweets (renoncer au cbind .. final!!) Aussi il faudrait avoir une procédure d’annotation distincte pour chaque méthode nrc, liwc, lsd and emoji. Faire une procédure nrcliwc n’a pas de sens.</p>
 <ul>
 <li>Lancer R CMD BATCH pour générer les jobs slurm</li>
 </ul>
@@ -646,7 +646,9 @@ sed -i &#39;s/_52.rds/_55.rds/g&#39;  emoji_grappa_slurm.R</code></pre>
 R CMD BATCH nrcliwc_grappa_slurm.R
 R CMD BATCH lsd_grappa_slurm.R
 R CMD BATCH emoji_grappa_slurm.R</code></pre>
-<p>verifier de temps en temps l’achevement des jobs en faisant:</p>
+<ul>
+<li>verifier de temps en temps l’achevement des jobs en faisant:</li>
+</ul>
 <pre class="bash"><code>sacct -o jobid,jobname,reqnodes,reqcpus,reqmem,maxrss,averss,elapsed -S 2020-05-11
 sacct -S 2020-05-11</code></pre>
 </div>

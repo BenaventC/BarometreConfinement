@@ -378,11 +378,11 @@ Noeuds  Temps
 
 ## Recuperation des annotations et mise à disposition libre pour la recherche
 
-### Recuperation par wget de grands fichies de tweets cumulés jusqu'au jour Y
+### Recuperation par wget de grands fichiers de tweets cumulés jusqu'au jour Y
 Les tweets extraits tous les jours et regroupés de maniere cummulée dans des grands fichiers de plusieurs Go sont téléchargés sur le serveur hpc zeus.univ-lille.fr en quelques minutes en utilisanat la commande linux "wget" en utilisant quelque astuces expliqué à cette adresse https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99
 
 ### Sur le serveur adapter et executer les procédures d'annotation *_grappa_slurm.R pour nrcliwc, lsd and emojis sur le fichier courant df_xx.rds file
-- Adapter: Ici il s'agit de passer du fichie df_52.rds au df_55.rds
+- Adapter: Ici il s'agit de passer du fichier df_52.rds au df_55.rds
 ```{bash, eval=FALSE}
 sed -i 's/_52.rds/_55.rds/g'  nrcliwc_grappa_slurm.R
 sed -i 's/_52.rds/_55.rds/g'  lsd_grappa_slurm.R
@@ -390,7 +390,7 @@ sed -i 's/_52.rds/_55.rds/g'  emoji_grappa_slurm.R
 ```
 
 Obs. Pour le principe du "divide et impera", il serait util de modifier les procédeures *_grappa_slurm.R  pour contenir uniquement les colonnes d'annotations sans aucune colonne en provenance des fichiers des tweets (renoncer au cbind .. final!!)
-Aussi il faudrait avoir une procédure d'annotation distincte pour chaque méthode nrc, liwc, lsd and emoji faire une procédure nrcliwc n'a pas de sens.
+Aussi il faudrait avoir une procédure d'annotation distincte pour chaque méthode nrc, liwc, lsd and emoji. Faire une procédure nrcliwc n'a pas de sens.
 
 - Lancer R CMD BATCH pour générer les jobs slurm  
 
@@ -401,7 +401,7 @@ R CMD BATCH lsd_grappa_slurm.R
 R CMD BATCH emoji_grappa_slurm.R
 ```
 
-verifier de temps en temps l'achevement des jobs en faisant:
+- verifier de temps en temps l'achevement des jobs en faisant:
 ```{bash, eval=FALSE}
 sacct -o jobid,jobname,reqnodes,reqcpus,reqmem,maxrss,averss,elapsed -S 2020-05-11
 sacct -S 2020-05-11
