@@ -34,13 +34,19 @@ library(kableExtra)
 
 ```{r capt, include=TRUE}
 
-df<- readRDS(file = "DataPrimaires/df_consoj4244.rds") 
+df1<- readRDS(file = "DataPrimaires/df_consoj4548.rds")
+df2<- readRDS(file = "DataPrimaires/df_consoj49.rds")
+df3<- readRDS(file = "DataPrimaires/df_consoj5052.rds")
+df4<- readRDS(file = "DataPrimaires/df_consoj5355.rds")
+
+df<-rbind(df1,df2,df3,df4)
+
 df<-df %>% select(user_id,status_id,created_at,screen_name,text,quoted_text,quoted_status_id,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,  country, country_code, name,location, description, place_name,friends_count, followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
 
 
 ```
 
-# L' évolution quantitative des tweets
+# L'évolution quantitative des tweets
 
 On retrace ici la production des tweets, rt et comment d"heure en heure ce qui permet de capter les variations quotidiennes. On notera qu'en journée l'échantillon représente plusieurs milliers d'observations à l'heure ce qui assure une grande sensibilité des mesures. On utilise [ts_plot](https://cran.r-project.org/web/packages/TSstudio/vignettes/Plotting_Time_Series.html)
 
@@ -125,7 +131,7 @@ kable(head(sent,5))
 df<-cbind(df,sent)
 
 #on sauvegarde pour réemploi ultérieur
-write_rds(df,"df_nrc4244.rds")
+write_rds(df,"df_nrc4552.rds")
 ```
 
 Une amélioration possible est la lemmatisation préalable du corpus qui devrait présenter un taux de reconnaissance plus élevé. C'est à tester de manière systématique
@@ -151,7 +157,7 @@ kable(head(test,5))
 
 df<-cbind(df,test)
 
-write_rds(df,"df_nrcliwc4244.rds")
+write_rds(df,"df_nrcliwc4552.rds")
 
 ```
 
@@ -179,17 +185,21 @@ analyseSentiments <- dfm(df_senti, dictionary = dic_ton)
 
 dfBaseSpecifique=data.frame(analyseSentiments,nb=ntoken(df_senti), id=rownames(df))
 dfBaseSpecifique<-dfBaseSpecifique %>% rename(Pos_lsdfr=POSITIVE, Neg_lsdfr=NEGATIVE)
-df_nrcliwclsd4244<-cbind(df,dfBaseSpecifique)
-write_rds(df_nrcliwclsd4244,"df_nrcliwclsd4244.rds")
-M<-subset(df_nrcliwclsd4244, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
+df_nrcliwclsd4555<-cbind(df,dfBaseSpecifique)
+write_rds(df_nrcliwclsd4555,"df_nrcliwclsd4555.rds")
+
+
+M<-subset(df_nrcliwclsd4555, select=c(anger, anticipation,disgust, fear, joy, sadness, surprise,trust, negative, positive,émopos,émonég,Pos_lsdfr,Neg_lsdfr))
 M <- cor(M)
 library(corrplot)
 corrplot.mixed(M, order="hclust")
 
-df_nrcliwclsd<- readRDS(file = "df_nrcliwclsd.rds") 
-df_nrcliwclsd4244<- readRDS(file = "df_nrcliwclsd4244.rds") 
+df_nrcliwclsd<- readRDS(file = "df_nrcliwclsd_cum44.rds") 
 
-df_nrcliwclsd_cum44 <-rbind(df_nrcliwclsd, df_nrcliwclsd4244)
+df_nrcliwclsd4555<- readRDS(file = "df_nrcliwclsd4555.rds") 
+
+df_nrcliwclsd_cum55 <-rbind(df_nrcliwclsd, df_nrcliwclsd4555)
+write_rds(df_nrcliwclsd_cum55,"df_nrcliwclsd_cum55.rds")
 
 ```
 

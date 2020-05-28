@@ -1,7 +1,7 @@
 ---
-title: "#ConfinementJour56 : a twitter corpus about the french confinement experience"
+title: "#DeConfinementJourJ : a twitter corpus about the french deconfinement experience"
 author: "SB - MC - CB"
-date: "27 avril 2020"
+date: "Sys.Date()"
 output:
   html_document: default
 ---
@@ -12,7 +12,7 @@ output:
 
 Ce script concerne la première phase de l'analyse, l'extraction des données réalisée avec le package rtweet et l'API rest de twitter dans sa version open.
 
-L'extraction est dirigée par le choix d'une série  hashtag #confinementjour1 puis 2 et 3, et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropocènique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de souffle en souffle et se déplace à travers la planête en businessclass et conduisant à clouer au sol la quasi totalité des flottes aériennes. 
+L'extraction est dirigée par le choix d'une série  hashtag #deconfinementjour1 puis 2 et 3, qui prend suite de #confinementJour et voué à de longs jours, on suppose qu'il cristalise les intentions de dire et de partager ses états d'âmes. C'est ce canal que nous allons utiliser pour tester la sensibilité des instrument de mesure du sentiment, et espérons mieux comprendre la réaction des populations à un choc  anthropocènique brutal (le choc c'est la rencontre d'une société avancée et mobile, et d'une contingence naturelle : un virus qui circule de souffle en souffle et se déplace à travers la planête en businessclass et conduisant à clouer au sol la quasi totalité des flottes aériennes. 
 
 Ce hashtag est apparu dans les 41 premiers jours en trending topic, s'il ne reflète pas l'ensemble des réactions au phénomène du confinement, juste une écume, il est assez commun et conventionnel pour être digne d'intéret. Une convention est une institution qui s'impose à tous mais qui a des alternatives, et  dont l'origine est inconnue(Favereau). Si l'exemple de la conduite à droite où à gauche est le plus évident, dans notre contexte les hashtag fonctionnent aussi comme des bannières de ralliement, une convention de signalement mais aussi un espace de rassemblement. Leur force conventionnelle peut d'ailleurs s'apprécier par leur stabilité.
 
@@ -45,7 +45,7 @@ Les limites de l'API free de twitter sont de 15000 requêtes par 15mn, on emploi
 
 On commence à capturer les données le 9ème jour, puis chaque jour sur le jour de la veille pour couvrir la rémanence (les tweets #confinementjourj publié à j+1). La convention fixe par sa morphologie un ordre du temps. En principe on capture l'intégralité du flux.
 
-La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filet".
+La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteur x. Mais la collecte étant réalisée quotidiennement sur le hashtag de la veille, la constitution du corpus se fait par des commandes manuelles. La concaténation reflète l'histoire des "jetés de filets".
 
 
 ```{r capt, include=TRUE, eval=FALSE,warning =TRUE, }
@@ -54,7 +54,7 @@ La boucle est opérationnelle si on ajoute, une série de hashtag dans le vecteu
 foo<-readRDS(file = "DataPrimaires/df_consoj9.rds")
 foo<- foo %>% filter(user_id=="1")
 
-x<-c("#ConfinementJour53","#ConfinementJour54","#ConfinementJour55")
+x<-c("#deConfinementJour6","#deConfinementJour7","#deConfinementJour8")
 
 for (val in x) {
   tweets <- search_tweets(val,n=200000,retryonratelimit = TRUE)%>%mutate(day=val)
@@ -63,7 +63,7 @@ foo<-rbind(foo,tweets)
 }
 df<-foo
 # les fichiers df_consoj sont les fichiers primaires à archiver
-write_rds(df,"DataPrimaires/df_consoj5355.rds")
+write_rds(df,"DataPrimaires/df_deconf6_8.rds")
 ```
 
 La compilation des données a été faite à la main, en fonction des collectes, la séquence reflète son histoire.
@@ -71,48 +71,15 @@ La compilation des données a été faite à la main, en fonction des collectes,
 ```{r capt2, eval=FALSE}
 
 #rattrapper le j19 ?
-df1_8<- readRDS(file = "DataPrimaires/df_conso.rds") 
-df9<-readRDS(file = "DataPrimaires/df_consoj9.rds")
-df10<-readRDS(file = "DataPrimaires/df_consoj10.rds")
-df11<-readRDS(file = "DataPrimaires/df_consoj11.rds")
-df121314<-readRDS(file = "DataPrimaires/df_consoj121314.rds")
-df15<-readRDS(file = "DataPrimaires/df_consoj15.rds")
-df15b<-readRDS(file = "DataPrimaires/df_consoj15b.rds")
-df15c<-readRDS(file = "DataPrimaires/df_consoj15c.rds")
-df16<-readRDS(file = "DataPrimaires/df_consoj16.rds")
-df17<-readRDS(file = "DataPrimaires/df_consoj17.rds")
-df18<-readRDS(file = "DataPrimaires/df_consoj18.rds")
-df19b<-readRDS(file = "DataPrimaires/df_consoj19b.rds")
-df1920<-readRDS(file = "DataPrimaires/df_consoj1920.rds")
-df21<-readRDS(file = "DataPrimaires/df_consoj21.rds")
-df22<-readRDS(file = "DataPrimaires/df_consoj22.rds")
-df23<-readRDS(file = "DataPrimaires/df_consoj23.rds")
-df24<-readRDS(file = "DataPrimaires/df_consoj24.rds")
-df25<-readRDS(file = "DataPrimaires/df_consoj25.rds")
-df26<-readRDS(file = "DataPrimaires/df_consoj26.rds")
-df27<-readRDS(file = "DataPrimaires/df_consoj27.rds")
-df28<-readRDS(file = "DataPrimaires/df_consoj2728.rds")
-df29<-readRDS(file = "DataPrimaires/df_consoj29.rds")
-df30<-readRDS(file = "DataPrimaires/df_consoj30.rds")
-df31<-readRDS(file = "DataPrimaires/df_consoj31.rds")
-df32<-readRDS(file = "DataPrimaires/df_consoj32.rds")
-df33a35<-readRDS(file = "DataPrimaires/df_consoj33a35.rds")
-df36<-readRDS(file = "DataPrimaires/df_consoj36.rds")
-df38<-readRDS(file = "DataPrimaires/df_consoj3738.rds")
-df41<-readRDS(file = "DataPrimaires/df_consoj3941.rds")
-df44<-readRDS(file = "DataPrimaires/df_consoj4244.rds")
-df48<-readRDS(file = "DataPrimaires/df_consoj4548.rds")
-df49<-readRDS(file = "DataPrimaires/df_consoj49.rds")
-df52<-readRDS(file = "DataPrimaires/df_consoj5052.rds")
-df55<-readRDS(file = "DataPrimaires/df_consoj5355.rds")
+dfc1_3<- readRDS(file = ""DataPrimaires/df_deconf1_3.rds"") 
 
 
-df_55<-rbind(df1_8,df9,df10,df11,df121314,df15,df15b,df15c,df16,df17,df18,df19b,df1920,df21,df22,df23,df24,df25,df26,df27,df28,df29,df30,df31,df32,df33a35,df36,df38,df41,df44,df48,df49,df52,df55) %>% select(user_id,status_id,created_at,screen_name,text,quoted_text,quoted_status_id,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,  country, country_code, name,location, description, place_name,friends_count, followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
+dfc_1_3<-rbind(dfc1_3) %>% select(user_id,status_id,created_at,screen_name,text,quoted_text,quoted_status_id,source,display_text_width,is_quote,is_retweet,favorite_count,retweet_count,quote_count,reply_count, media_type, lang,  country, country_code, name,location, description, place_name,friends_count, followers_count,statuses_count,listed_count, favourites_count, account_created_at, verified,hashtags,mentions_screen_name)
 
-write_rds(df_55,"df_55.rds")
+write_rds(dfc_1_3,"dfc_1_3.rds")
 
 #on crée un échantillon de travail
-sample<-readRDS(file="df_55.rds")
+sample<-readRDS(file="dfc_1_3.rds")
 sample<- sample_n(sample,70000)
 write_rds(sample,"df_sample.rds")
 

@@ -1,10 +1,11 @@
 ---
-title: "La dynamique du réseau des lemmes les plus fréquents"
-author: "Julien Monnot"
-date: "25 avril 2020"
-output:
-  html_document: default
+title: "ldc_words_v02_jm"
+author: "cb"
+date: "16/05/2020"
+output: html_document
 ---
+
+
 ![@richard_tassart](masccatdelivery.jpg)
 
 
@@ -24,12 +25,12 @@ library(graphlayouts)
 library(proustr)
 library(widyr)
 library(ggraph)
-#memory.limit(size=64000)
+#memory.limit(size=16000)
 ```
 
 # lecture des données
 
-```{r data, fig.width=9}
+```{r data, fig.width=9, cache=TRUE}
 
 df <- readRDS("df_nrcliwclsd_cum55.rds")
 
@@ -39,12 +40,16 @@ df$hour<-as.numeric(format(df$created_at, "%H")) # heure
 df$year<-2020 # heure
 
 
-df<- df %>% mutate(Jour=ifelse(month == 3,day-16 ,ifelse(month>3,day+15,0)))
-
-
+df<- df %>% mutate(Jour=ifelse(month == 3,day-15 ,ifelse(month==4,day+16,day+45)))
+ggplot(df,aes(Jour))+geom_bar()
 ```
 
-```{r pos2, fig.width=9}
+
+dfdf
+sgsdgsdg
+
+
+```{r pos, fig.width=9}
 
 lex_lm <- get_lexicon("fr")
 
@@ -85,7 +90,7 @@ foo<-df_Tok_Fltr1 %>%
   group_by(Jour) %>% 
   arrange(Jour, desc(frequence), lemma) %>% 
   mutate(ranking = row_number(),
-         Day = Jour) %>% as.data.frame() %>%filter(lemma=="masque"|lemma=="soignant"|lemma=="gouvernement"| lemma=="chloroquine"|lemma=="enfant") %>% filter(Jour<45)
+         Day = Jour) %>% as.data.frame() %>%filter(lemma=="masque"|lemma=="soignant"|lemma=="gouvernement"| lemma=="chloroquine"|lemma=="enfant") %>% filter(Jour<55)
 
 col<-c('orange1','coral2','blue3','lightblue','paleturquoise4','darkcyan')
 ggplot(data = foo, aes(x = Jour, y = ranking, group = lemma)) +
@@ -104,10 +109,10 @@ cooccurences
 fichier network
 representations
 
-```{r Cooc1-17, fig.width=9}
+```{r Cooc, fig.width=9}
 
 
-for (i in 2:44) {
+for (i in 2:54) {
   
 df_Day <- df_Tok_Fltr1 %>%
   filter(Jour == i)
@@ -125,7 +130,7 @@ actu[df_Day$Jour==18]<-"Vacances des parisiens - bac en tontrôle continu"
 actu[df_Day$Jour==19]<-"125000 français on été rapatriés" 
 actu[df_Day$Jour==20]<-"30 morts à l'ehpad de Mougins" 
 actu[df_Day$Jour==23]<-"Annonce du discours du président" 
-actu[df_Day$Jour==25]<-"Coronavirus : le porte-avions français CdG, et ses 50 cas attendu à Toulon"
+actu[df_Day$Jour==25]<-"Coronavirus : le porte-avions français CdG, et ses 50 cas attendus à Toulon"
 actu[df_Day$Jour==27]<-"Dimanche de Pâques" 
 actu[df_Day$Jour==28]<-"Le discours du Président : à partir du 11 Mai" 
 actu[df_Day$Jour==29]<-"On passe les 10000 morts à l'hôpital" 
@@ -133,8 +138,20 @@ actu[df_Day$Jour==34]<-"Conférence du 1er ministre"
 actu[df_Day$Jour==37]<-"Un salarié du privé sur deux est en chomage technique" 
 actu[df_Day$Jour==39]<-"Les décès en hausse de 25% par rapport à 2019 selon l'Insee"
 actu[df_Day$Jour==41]<-"dimanche" 
+actu[df_Day$Jour==42]<-"dimanche" 
 actu[df_Day$Jour==43]<-"Plan de déconfinement" 
 actu[df_Day$Jour==44]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==45]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==46]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==47]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==48]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==49]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==50]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==51]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==52]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==53]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==54]<-"23376 morts en france dont 9132 en ehpad"
+actu[df_Day$Jour==55]<-"dernier jour de confinement 23376 morts en france dont 9132 en ehpad"
 
 cooc <- df_Day %>%
   pairwise_count(lemma, feature = user_id,sort=T) 
@@ -150,10 +167,10 @@ my_graph <- mots_graph %>%
    ggraph::geom_node_point(color = "gold3", size = 2.5) +
    ggraph::geom_node_text(aes(label = name), repel = TRUE, cex=3) +
    ggplot2::theme_void() + 
-   labs(title = paste("ConfinementJour",i,": ",actu))
+   labs(title = paste0("ConfinementJour",i," : ", actu))
 
 plot(my_graph)
-ggsave(paste("Jour",i,".jpg"))
+#ggsave(paste0("J_",i,".jpg"))
 }
 
 ```
