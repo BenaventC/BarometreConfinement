@@ -23,7 +23,8 @@ Deux pistes sont exploitées:
 
 ### La méthode
 
-Sont développées et actualisées des méthodes de calcul BigData présentées par moi en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que j'ai appelée GeneRal Approach for Parallel Processing Actions ou « GRAPPA » (un clin d'œil  à la boisson qui nous a inspiré là-bas). Il s'agit de combiner l'approche MapReduce qui a démocratisé les calculs BigData avec les solutions de calcul parallel disponibles sur un ordinateur multicoeur et sur les clusters d'ordinateurs.
+Sont développées et actualisées des méthodes de calcul BigData présentées par moi en 2016 à une conférence à Venise (<http://archives.marketing-trends-congress.com/2016/pages/PDF/CALCIU_MOULINS_SALERNO.pdf>) . Elles reposent essentiellement sur la méthode que j'ai appelée GeneRal Approach for Parallel Processing Actions ou « GRAPPA » (un clin d'œil  à la boisson qui nous a inspiré là-bas). Les calculs sont accélérés en divisant les données massives (BigData) en segments (chunks) et en les appliquant en parallel sur chaque segment. Pour ce faire sont utilisés les fonctions “Map” et “Reduce” de R sur un ordinateur multicoeur et sur les clusters d'ordinateurs. L'accélération due au calcul parallele est beaucoup plus importante sur le cluster ou chaque machine (noeud) dispose de sa propre mémoire que sur une seule machine ou des multiple coeurs travaillent en parallel en se partageant la même mémoire.
+
 
 ### Elements communs aux deux approches (multicore et cluster)
 
@@ -63,8 +64,9 @@ fsplit = rep(1:ncores, each=round(ntweets/ncores+.5,0))
 ```
 
 
-### Calcul parallèle sur un ordinateur (implicit or multicore parallelism)
-En répartisant les données segmentées (splitées) et leur calcul sur plusieurs coeurs à la fois on arrive a réduire la durée des calculs 2 à 3 fois.
+### Calcul parallèle sur un ordinateur (implicit or multicore parallelism)  --> nrcliwc_grappa.R
+En répartisant les données segmentées (splitées) et leur calcul sur plusieurs coeurs à la fois on arrive a réduire la durée des calculs 2 à 3 fois. Ici on utilise le package R nomé “parallel” (R Core Team, 2020) avec sa fonction de type MAP “mcapply”.
+
 
 #### NRC
 Analyse du sentiment simple (negatif, positif), puis celui des émotions (confiance,peur,surprise,tristesse,dégoût,colère,anticipation,joie)
@@ -137,9 +139,9 @@ write_rds(df_nrcliwc,"df_nrcliwc.rds")
 ```
 
 
-### Calcul parallèle sur un cluster (cluster parallelism)
+### Calcul parallèle sur un cluster (cluster parallelism)  --> nrcliwc_grappa_slurm.R
 
-En répartisant les calculs sur plusieurs ordinateurs (noeuds) sur un cluster on arrive a réduire substantiellement leur durée (jusqu'à des dizaines de fois).
+En répartisant les calculs sur plusieurs ordinateurs (noeuds) sur un cluster on arrive a réduire substantiellement leur durée (jusqu'à des dizaines de fois). On mobilise ici le package R rslurm  (Marchand & Carroll, 2019) qui soumet des calculs R au gestionnaire de travaux du cluster appelé SLURM (Simple Linux Utility for Resource Management)
 
 Il s'agit du cluster HPC (High Performance Computing) de type grille de calcul du notre méso-centre de l'unversité. Les calculs sur le Cluster s'effectuent par l'intermédiaire d'un gestionnaire de travaux qui s'occupe de gérer la file d'attente et de lancer les calculs lorsque les ressources demandées sont disponibles.
 
@@ -373,3 +375,124 @@ Noeuds  Temps
 8      9
 
 16     4
+
+## Recuperation des annotations et mise à disposition libre pour la recherche
+
+### Recuperation par wget de grands fichiers de tweets cumulés jusqu'au jour Y
+Les tweets extraits tous les jours et regroupés de maniere cummulée dans des grands fichiers de plusieurs Go sont téléchargés sur le serveur hpc zeus.univ-lille.fr en quelques minutes en utilisanat la commande linux "wget" en utilisant quelque astuces expliqué à cette adresse https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99
+
+### Sur le serveur adapter et executer les procédures d'annotation *_grappa_slurm.R pour nrcliwc, lsd and emojis sur le fichier courant df_xx.rds file
+- Adapter: Ici il s'agit de passer du fichier df_52.rds au df_55.rds
+```{bash, eval=FALSE}
+sed -i 's/_52.rds/_55.rds/g'  nrcliwc_grappa_slurm.R
+sed -i 's/_52.rds/_55.rds/g'  lsd_grappa_slurm.R
+sed -i 's/_52.rds/_55.rds/g'  emoji_grappa_slurm.R
+```
+
+Obs. Pour le principe du "divide et impera", il serait util de modifier les procédeures *_grappa_slurm.R  pour contenir uniquement les colonnes d'annotations sans aucune colonne en provenance des fichiers des tweets (renoncer au cbind .. final!!)
+Aussi il faudrait avoir une procédure d'annotation distincte pour chaque méthode nrc, liwc, lsd and emoji. Faire une procédure nrcliwc n'a pas de sens.
+
+- Lancer R CMD BATCH pour générer les jobs slurm  
+
+```{bash, eval=FALSE}
+module load R
+R CMD BATCH nrcliwc_grappa_slurm.R
+R CMD BATCH lsd_grappa_slurm.R
+R CMD BATCH emoji_grappa_slurm.R
+```
+
+- verifier de temps en temps l'achevement des jobs en faisant:
+```{bash, eval=FALSE}
+sacct -o jobid,jobname,reqnodes,reqcpus,reqmem,maxrss,averss,elapsed -S 2020-05-11
+sacct -S 2020-05-11
+```
+
+
+###  Adapter et executer la preparation des fichiers d'annotations à mettre en libre service dff_*_Xx.csv
+
+- Adapter: les procédure  *4free.R procedures for nrc, lsd and emojis
+ Ici il s'agit de passer du jour cumulé 52 à 55
+```{bash, eval=FALSE}
+sed -i 's/_52/_55/g'  nrc4free.R
+sed -i 's/_52/_55/g'  lsd4free.R
+sed -i 's/_52/_55/g'  emoji4free.R
+```
+
+
+- Executer 
+```{bash, eval=FALSE}
+R CMD BATCH nrc4free.R
+R CMD BATCH lsd4free.r
+R CMD BATCH emoji4free.r
+```
+
+
+### Evaluer la taille et le nombre de lignes pour les splits des dff_*_55.csv resultants
+
+Il s'agit des fichiers d'annotations qui doivent satisfaire la limite github de 25M
+
+```{bash, eval=FALSE}
+wc -l dff_lsd_55.csv 
+#2598250 dff_nrc_55.csv
+ls -l –-block-size M  dff_*_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 52M 11 mai   12:10 dff_emos_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 36M 11 mai   12:10 dff_lsd_55.csv
+#-rw-r--r-- 1 mihai.calciu iae 50M 11 mai   12:08 dff_nrc_55.csv
+```
+
+Fixer le nombre de tweets per split pour arriver à moins de 25M: si deux -> 1299125; si trois 866083 
+Faire le split et nommer les fichier qui resultent:
+
+```{bash, eval=FALSE}
+split -l 1299125  dff_nrc_55.csv
+mv xaa dff_nrc_55_1.csv
+mv xab dff_nrc_55_2.csv
+split -l 1299125  dff_lsd_55.csv
+mv xaa dff_lsd_55_1.csv
+mv xab dff_lsd_55_2.csv
+split -l 866083  dff_emos_55.csv
+mv xaa dff_emos_55_1.csv
+mv xab dff_emos_55_2.csv
+mv xac dff_emos_55_3.csv
+```
+
+
+
+### Adapter et créer des fichiers "meta-helpers" un pour la colonne lang l'autre pour create_at (posix-date) le denier surtout pour se réperer lors de l'hydratation etc.
+
+
+- Adapter: 
+ Ici il s'agit de passer du jour cumulé 52 à 55
+```{bash, eval=FALSE}
+sed -i 's/_52/_55/g'  maketwdate.R
+sed -i 's/_52/_55/g'  makelang.R
+```
+
+
+- Executer 
+```{bash, eval=FALSE}
+R CMD BATCH maketwdate.R
+R CMD BATCH makelang.R
+```
+
+
+### Récuperer les fichier d'annotations à mettre en libre service sur le repository local
+ 
+```{bash, eval=FALSE}
+cd ~/ cd Documents/Collaborations/christophe/BaromettreCovid19/gits/COVID19-LockdownFr/
+cd LockdownAnnot
+rm * # effacer tous les fichiers anciens
+sftp mihai.calciu@zeus.univ-lille.fr
+cd /workdir/mihai.calciu
+get df_twdate_55.rds 
+mget dff_*_55_?.csv
+```
+
+
+# Mettre à jour le repository sur github
+```{bash, eval=FALSE}
+git status # voir ce qui a changé
+git add # a completer
+```
+
+
